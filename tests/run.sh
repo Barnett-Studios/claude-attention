@@ -93,5 +93,31 @@ echo '{"sound":false}' > "$d/home/.claude/attention.json"
 check "sound false plays nothing" $'bell\npopup:Claude Code · proj|hello' \
   "$(run "$d" "{\"message\":\"hello\",\"cwd\":\"$d/proj\"}")"
 
+d="$(fresh)"; cleanup_dirs+=("$d")
+echo '{"enabled":false}' > "$d/home/.claude/attention.json"
+echo '{"enabled":null}' > "$d/proj/.claude/attention.json"
+check "null in project config does not override global" "" "$(run "$d" "{\"message\":\"hello\",\"cwd\":\"$d/proj\"}")"
+
+d="$(fresh)"; cleanup_dirs+=("$d")
+echo '{"sound":null}' > "$d/home/.claude/attention.json"
+check "null sound keeps the default" "$all" "$(run "$d" "{\"message\":\"hello\",\"cwd\":\"$d/proj\"}")"
+
+d="$(fresh)"; cleanup_dirs+=("$d")
+touch "$d/home/chime.wav"
+echo '{"sound":"~/chime.wav"}' > "$d/home/.claude/attention.json"
+check "sound path expands ~" $'bell\nsound:'"$d/home/chime.wav"$'\npopup:Claude Code · proj|hello' \
+  "$(run "$d" "{\"message\":\"hello\",\"cwd\":\"$d/proj\"}")"
+
+d="$(fresh)"; cleanup_dirs+=("$d"); mkdir -p "$d/other"
+run "$d" "{\"message\":\"first\",\"cwd\":\"$d/proj\"}" >/dev/null
+check "debounce is per project: another project still signals" $'bell\nsound:'"$glass"$'\npopup:Claude Code · other|hello' \
+  "$(run "$d" "{\"message\":\"hello\",\"cwd\":\"$d/other\"}")"
+
+d="$(fresh)"; cleanup_dirs+=("$d")
+nl="$d/a"$'\n'"b"; mkdir -p "$nl"
+run "$d" "$(jq -nc --arg c "$nl" '{message:"x",cwd:$c}')" >/dev/null
+check "log stays one line per event despite a newline in the project name" "1" \
+  "$(wc -l < "$d/home/.claude/attention.log" | tr -d ' ')"
+
 printf '%d passed, %d failed\n' "$pass" "$fail"
 [[ "$fail" -eq 0 ]]

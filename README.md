@@ -24,6 +24,10 @@ deny it without asking. Open **System Settings → Notifications → Claude Atte
 *Allow notifications* (Banners or Alerts). Until then the plugin falls back to a plain
 AppleScript notification (Script Editor's icon).
 
+The app is compiled when a session starts. If a popup is due before that has happened (the plugin
+was just installed or updated mid-session), the compile starts in the background and that one popup
+uses the fallback — hooks only get 10 seconds, too short to compile in.
+
 ## Configure
 
 Create `~/.claude/attention.json` (global) and/or `<project>/.claude/attention.json` (overrides the
@@ -43,9 +47,9 @@ global file key by key). Every key is optional; a missing file or key keeps the 
 |---|---|---|
 | `enabled` | `false` silences everything | `true` |
 | `bell` | terminal bell on/off | `true` |
-| `sound` | `false`, `true` (Glass), a macOS sound name (`Ping`, `Hero`, `Submarine`, … from `/System/Library/Sounds`), or a path to any audio file | `true` |
+| `sound` | `false`, `true` (Glass), a macOS sound name (`Ping`, `Hero`, `Submarine`, … from `/System/Library/Sounds`), or a path to any audio file (`~` allowed) | `true` |
 | `popup` | notification popup on/off | `true` |
-| `icon` | `"claude"` (the installed Claude desktop app's icon), `false` (generic), or a path to an image (`.icns`, `.png`, `.jpg`, …) | `"claude"` |
+| `icon` | `"claude"` (the installed Claude desktop app's icon), `false` (generic), or a path to an image (`.icns`, `.png`, `.jpg`, …; `~` allowed, relative paths resolve against `~/.claude/`) | `"claude"` |
 
 `icon` is read from the **global** file only: macOS takes a notification's icon from the app that
 posts it, so there is one icon per machine. Notification Center also keeps the first icon it sees
@@ -68,7 +72,8 @@ it. Without the desktop app installed, `"claude"` falls back to the generic icon
 - Fires on the `Stop` and `Notification` hooks.
 - Skips subagent events, and `Stop` while background tasks are still running (the session will
   wake again on its own).
-- Debounced: one signal per 8 seconds, so a manual call plus a hook never doubles up.
+- Debounced per project: one signal per 8 seconds, so a manual call plus a hook never doubles up,
+  while a session in another project still gets through.
 - Fail-open: it never blocks or breaks a session.
 - Each decision is logged to `~/.claude/attention.log` (last 200 lines).
 

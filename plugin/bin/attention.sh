@@ -21,7 +21,7 @@ event="$(j '.hook_event_name // empty')"
 msg="$(j '.message // empty')"
 cwd="$(j '.cwd // empty')"
 cwd="${cwd:-$PWD}"
-project="$(basename "$cwd")"
+project="$(basename "$cwd" | tr -d '\n\r')"
 tpath="$(j '.transcript_path // .agent_transcript_path // empty')"
 agent="$(j '.agent_id // .agent_type // empty')"
 # background work still in flight (subagents, shells, monitors): the session will wake again on
@@ -35,7 +35,7 @@ cfg() {
   local v="true" f r
   for f in "$HOME/.claude/attention.json" "$cwd/.claude/attention.json"; do
     [[ -f "$f" ]] || continue
-    r="$(jq -r --arg k "$1" 'if type == "object" and has($k) then .[$k] | tostring else empty end' "$f" 2>/dev/null)"
+    r="$(jq -r --arg k "$1" 'if type == "object" and has($k) and .[$k] != null then .[$k] | tostring else empty end' "$f" 2>/dev/null)"
     [[ -n "$r" ]] && v="$r"
   done
   printf '%s' "$v"
@@ -55,14 +55,14 @@ log="$HOME/.claude/attention.log"
 if [[ -d "$HOME/.claude" ]]; then
   printf '%s event=%s verdict=%s project=%s sid=%s\n' "$(date +%FT%T)" "${event:-manual}" "$verdict" \
     "$project" "$(j '.session_id // "-"')" >> "$log" 2>/dev/null
-  { tail -n 200 "$log" > "$log.tmp" && mv "$log.tmp" "$log"; } 2>/dev/null
+  { tail -n 200 "$log" > "$log.$$" && mv "$log.$$" "$log"; } 2>/dev/null
 fi
 [[ "$verdict" == "signal" ]] || exit 0
 
-# debounce: one signal per burst, so a manual call followed by the Stop/Notification hook never
-# doubles up
+# debounce: one signal per burst per project, so a manual call followed by the Stop/Notification
+# hook never doubles up, while another project's session still gets through
 WINDOW=8
-stamp="${TMPDIR:-/tmp}/claude-attention.last"
+stamp="${TMPDIR:-/tmp}/claude-attention.$(printf '%s' "$cwd" | shasum | cut -c1-12).last"
 now=$(date +%s)
 last=$(cat "$stamp" 2>/dev/null || echo 0)
 [[ "$last" =~ ^[0-9]+$ ]] || last=0
@@ -85,6 +85,7 @@ sound_file() {
     false) return ;;
     true)  s="Glass" ;;
   esac
+  s="${s/#\~/$HOME}"
   [[ "$s" == */* ]] || s="/System/Library/Sounds/$s.aiff"
   [[ -f "$s" ]] && printf '%s' "$s"
 }
