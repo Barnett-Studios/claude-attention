@@ -1,0 +1,15 @@
+{
+  "name": "claude-attention",
+  "owner": {
+    "name": "Yoan Dimitrov"
+  },
+  "description": "Attention signals for Claude Code on macOS.",
+  "plugins": [
+    {
+      "name": "claude-attention",
+      "source": "./plugin",
+      "description": "macOS popup, chime and terminal bell when Claude Code finishes or needs you — with a configurable icon and sound, and per-project on/off switches.",
+      "version": "0.1.0"
+    }
+  ]
+}
