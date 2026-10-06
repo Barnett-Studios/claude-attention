@@ -98,7 +98,7 @@ follow, per the parent plan.
         "src/paths.rs"
       ],
       "change": "Implement Paths::from_lookup per its doc comment. Replace only the unimplemented!(\"delegated: paths-from-lookup\") body; do not change signatures, parameter names, other functions or tests, and add no #[allow] attributes.",
-      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test paths paths_ 2>&1 | grep -qE 'test result: ok\. 4 passed'",
+      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test paths paths_ 2>&1 | grep -qE 'test result: ok\\. 4 passed'",
       "forbid": [
         "new_deps"
       ],
@@ -111,7 +111,7 @@ follow, per the parent plan.
         "src/config.rs"
       ],
       "change": "Implement expand_home per its doc comment. Replace only the unimplemented!(\"delegated: expand-home\") body; do not change signatures, parameter names, other functions or tests, and add no #[allow] attributes.",
-      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test config expand_home 2>&1 | grep -qE 'test result: ok\. 1 passed'",
+      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test config expand_home 2>&1 | grep -qE 'test result: ok\\. 1 passed'",
       "forbid": [
         "new_deps"
       ],
@@ -124,7 +124,7 @@ follow, per the parent plan.
         "src/config.rs"
       ],
       "change": "Implement parse_sound per its doc comment (use expand_home for ~; a relative file path joins onto config_dir). Replace only the unimplemented!(\"delegated: parse-sound\") body; do not change signatures, parameter names, other functions or tests, and add no #[allow] attributes.",
-      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test config parse_sound 2>&1 | grep -qE 'test result: ok\. 1 passed'",
+      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test config parse_sound 2>&1 | grep -qE 'test result: ok\\. 1 passed'",
       "forbid": [
         "new_deps"
       ],
@@ -137,7 +137,7 @@ follow, per the parent plan.
         "src/config.rs"
       ],
       "change": "Implement parse_icon per its doc comment (use expand_home; relative paths join onto config_dir). Replace only the unimplemented!(\"delegated: parse-icon\") body; do not change signatures, parameter names, other functions or tests, and add no #[allow] attributes.",
-      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test config parse_icon 2>&1 | grep -qE 'test result: ok\. 1 passed'",
+      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test config parse_icon 2>&1 | grep -qE 'test result: ok\\. 1 passed'",
       "forbid": [
         "new_deps"
       ],
@@ -150,7 +150,7 @@ follow, per the parent plan.
         "src/config.rs"
       ],
       "change": "Implement read_layer per its doc comment with std::fs and serde_json. Replace only the unimplemented!(\"delegated: read-layer\") body; do not change signatures, parameter names, other functions or tests, and add no #[allow] attributes.",
-      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test config read_layer 2>&1 | grep -qE 'test result: ok\. 1 passed'",
+      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test config read_layer 2>&1 | grep -qE 'test result: ok\\. 1 passed'",
       "forbid": [
         "new_deps"
       ],
@@ -163,7 +163,7 @@ follow, per the parent plan.
         "src/config.rs"
       ],
       "change": "Implement resolve per its doc comment, using parse_sound and parse_icon; a project-layer sound that parses to Sound::File is ignored. Replace only the unimplemented!(\"delegated: resolve-config\") body; do not change signatures, parameter names, other functions or tests, and add no #[allow] attributes.",
-      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test config resolve_ 2>&1 | grep -qE 'test result: ok\. 8 passed'",
+      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test config resolve_ 2>&1 | grep -qE 'test result: ok\\. 8 passed'",
       "forbid": [
         "new_deps"
       ],
@@ -176,7 +176,7 @@ follow, per the parent plan.
         "src/envelope.rs"
       ],
       "change": "Implement parse per its doc comment with serde_json::from_str::<Envelope>. Replace only the unimplemented!(\"delegated: parse-envelope\") body; do not change signatures, parameter names, other functions or tests, and add no #[allow] attributes.",
-      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test envelope parse_envelope 2>&1 | grep -qE 'test result: ok\. 2 passed'",
+      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test envelope parse_envelope 2>&1 | grep -qE 'test result: ok\\. 2 passed'",
       "forbid": [
         "new_deps"
       ],
@@ -189,7 +189,7 @@ follow, per the parent plan.
         "src/envelope.rs"
       ],
       "change": "Implement default_message per its doc comment. Replace only the unimplemented!(\"delegated: default-message\") body; do not change signatures, parameter names, other functions or tests, and add no #[allow] attributes.",
-      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test envelope default_message 2>&1 | grep -qE 'test result: ok\. 1 passed'",
+      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test envelope default_message 2>&1 | grep -qE 'test result: ok\\. 1 passed'",
       "forbid": [
         "new_deps"
       ],
@@ -202,7 +202,7 @@ follow, per the parent plan.
         "src/envelope.rs"
       ],
       "change": "Implement project_label per its doc comment. Replace only the unimplemented!(\"delegated: project-label\") body; do not change signatures, parameter names, other functions or tests, and add no #[allow] attributes.",
-      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test envelope project_label 2>&1 | grep -qE 'test result: ok\. 1 passed'",
+      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test envelope project_label 2>&1 | grep -qE 'test result: ok\\. 1 passed'",
       "forbid": [
         "new_deps"
       ],
@@ -215,7 +215,7 @@ follow, per the parent plan.
         "src/debounce.rs"
       ],
       "change": "Implement stamp_path per its doc comment using sha2::Sha256 over the project path's bytes (as_os_str().as_encoded_bytes()). Replace only the unimplemented!(\"delegated: stamp-path\") body; do not change signatures, parameter names, other functions or tests, and add no #[allow] attributes.",
-      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test debounce stamp_path 2>&1 | grep -qE 'test result: ok\. 1 passed'",
+      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test debounce stamp_path 2>&1 | grep -qE 'test result: ok\\. 1 passed'",
       "forbid": [
         "new_deps"
       ],
@@ -228,7 +228,7 @@ follow, per the parent plan.
         "src/debounce.rs"
       ],
       "change": "Implement admit per its doc comment with std::fs. Replace only the unimplemented!(\"delegated: debounce-admit\") body; do not change signatures, parameter names, other functions or tests, and add no #[allow] attributes.",
-      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test debounce admit_ 2>&1 | grep -qE 'test result: ok\. 3 passed'",
+      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test debounce admit_ 2>&1 | grep -qE 'test result: ok\\. 3 passed'",
       "forbid": [
         "new_deps"
       ],
@@ -241,7 +241,7 @@ follow, per the parent plan.
         "src/log.rs"
       ],
       "change": "Implement sanitize per its doc comment. Replace only the unimplemented!(\"delegated: log-sanitize\") body; do not change signatures, parameter names, other functions or tests, and add no #[allow] attributes.",
-      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test log sanitize 2>&1 | grep -qE 'test result: ok\. 1 passed'",
+      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test log sanitize 2>&1 | grep -qE 'test result: ok\\. 1 passed'",
       "forbid": [
         "new_deps"
       ],
@@ -254,7 +254,7 @@ follow, per the parent plan.
         "src/log.rs"
       ],
       "change": "Implement append per its doc comment with std::fs (OpenOptions append; trim through '<name>.<pid>' temp file + rename). Replace only the unimplemented!(\"delegated: log-append\") body; do not change signatures, parameter names, other functions or tests, and add no #[allow] attributes.",
-      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test log append_ 2>&1 | grep -qE 'test result: ok\. 3 passed'",
+      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test log append_ 2>&1 | grep -qE 'test result: ok\\. 3 passed'",
       "forbid": [
         "new_deps"
       ],
@@ -267,7 +267,7 @@ follow, per the parent plan.
         "src/sound.rs"
       ],
       "change": "Implement resolve per its doc comment. Replace only the unimplemented!(\"delegated: sound-resolve\") body; do not change signatures, parameter names, other functions or tests, and add no #[allow] attributes.",
-      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test sound resolve_ 2>&1 | grep -qE 'test result: ok\. 3 passed'",
+      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test sound resolve_ 2>&1 | grep -qE 'test result: ok\\. 3 passed'",
       "forbid": [
         "new_deps"
       ],
@@ -280,7 +280,7 @@ follow, per the parent plan.
         "src/sound.rs"
       ],
       "change": "Implement player per its doc comment. Replace only the unimplemented!(\"delegated: sound-player\") body; do not change signatures, parameter names, other functions or tests, and add no #[allow] attributes.",
-      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test sound player_ 2>&1 | grep -qE 'test result: ok\. 2 passed'",
+      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test sound player_ 2>&1 | grep -qE 'test result: ok\\. 2 passed'",
       "forbid": [
         "new_deps"
       ],
@@ -293,7 +293,7 @@ follow, per the parent plan.
         "src/lock.rs"
       ],
       "change": "Implement acquire per its doc comment: use the existing open() helper, then File::try_lock(); return Some(LockGuard { _file }) on success. Replace only the unimplemented!(\"delegated: lock-acquire\") body; do not change signatures, parameter names, other functions or tests, and add no #[allow] attributes.",
-      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test lock acquire_ 2>&1 | grep -qE 'test result: ok\. 4 passed'",
+      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test lock acquire_ 2>&1 | grep -qE 'test result: ok\\. 4 passed'",
       "forbid": [
         "new_deps"
       ],
@@ -306,7 +306,7 @@ follow, per the parent plan.
         "src/popup/linux.rs"
       ],
       "change": "Implement notify_send_args per its doc comment (use APP_NAME). Replace only the unimplemented!(\"delegated: notify-send-args\") body; do not change signatures, parameter names, other functions or tests, and add no #[allow] attributes.",
-      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test popup_linux notify_send_args 2>&1 | grep -qE 'test result: ok\. 1 passed'",
+      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test popup_linux notify_send_args 2>&1 | grep -qE 'test result: ok\\. 1 passed'",
       "forbid": [
         "new_deps"
       ],
@@ -319,7 +319,7 @@ follow, per the parent plan.
         "src/popup/linux.rs"
       ],
       "change": "Implement gdbus_args per its doc comment (use APP_NAME). Replace only the unimplemented!(\"delegated: gdbus-args\") body; do not change signatures, parameter names, other functions or tests, and add no #[allow] attributes.",
-      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test popup_linux gdbus_args 2>&1 | grep -qE 'test result: ok\. 1 passed'",
+      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test popup_linux gdbus_args 2>&1 | grep -qE 'test result: ok\\. 1 passed'",
       "forbid": [
         "new_deps"
       ],
@@ -332,7 +332,7 @@ follow, per the parent plan.
         "src/popup/macos.rs"
       ],
       "change": "Implement icon_digest per its doc comment using sha2::Sha256. Replace only the unimplemented!(\"delegated: icon-digest\") body; do not change signatures, parameter names, other functions or tests, and add no #[allow] attributes.",
-      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test popup_macos icon_digest 2>&1 | grep -qE 'test result: ok\. 1 passed'",
+      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test popup_macos icon_digest 2>&1 | grep -qE 'test result: ok\\. 1 passed'",
       "forbid": [
         "new_deps"
       ],
@@ -345,7 +345,7 @@ follow, per the parent plan.
         "src/popup/macos.rs"
       ],
       "change": "Implement identity per its doc comment using ID_PREFIX. Replace only the unimplemented!(\"delegated: bundle-identity\") body; do not change signatures, parameter names, other functions or tests, and add no #[allow] attributes.",
-      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test popup_macos identity 2>&1 | grep -qE 'test result: ok\. 1 passed'",
+      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test popup_macos identity 2>&1 | grep -qE 'test result: ok\\. 1 passed'",
       "forbid": [
         "new_deps"
       ],
@@ -358,7 +358,7 @@ follow, per the parent plan.
         "src/popup/macos.rs"
       ],
       "change": "Implement source_digest per its doc comment (sha256 over SWIFT_SOURCE bytes then env!(\"CARGO_PKG_VERSION\") bytes). Replace only the unimplemented!(\"delegated: source-digest\") body; do not change signatures, parameter names, other functions or tests, and add no #[allow] attributes.",
-      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test popup_macos source_digest 2>&1 | grep -qE 'test result: ok\. 1 passed'",
+      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test popup_macos source_digest 2>&1 | grep -qE 'test result: ok\\. 1 passed'",
       "forbid": [
         "new_deps"
       ],
@@ -371,7 +371,7 @@ follow, per the parent plan.
         "src/popup/macos.rs"
       ],
       "change": "Implement info_plist per its doc comment as a format! string with the XML header and DOCTYPE. Replace only the unimplemented!(\"delegated: info-plist\") body; do not change signatures, parameter names, other functions or tests, and add no #[allow] attributes.",
-      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test popup_macos info_plist 2>&1 | grep -qE 'test result: ok\. 1 passed'",
+      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test popup_macos info_plist 2>&1 | grep -qE 'test result: ok\\. 1 passed'",
       "forbid": [
         "new_deps"
       ],
@@ -384,7 +384,7 @@ follow, per the parent plan.
         "src/popup/macos.rs"
       ],
       "change": "Implement icon_source per its doc comment. Replace only the unimplemented!(\"delegated: icon-source\") body; do not change signatures, parameter names, other functions or tests, and add no #[allow] attributes.",
-      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test popup_macos icon_source 2>&1 | grep -qE 'test result: ok\. 1 passed'",
+      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test popup_macos icon_source 2>&1 | grep -qE 'test result: ok\\. 1 passed'",
       "forbid": [
         "new_deps"
       ],
@@ -397,7 +397,7 @@ follow, per the parent plan.
         "src/popup/macos.rs"
       ],
       "change": "Implement osascript_args per its doc comment. Replace only the unimplemented!(\"delegated: osascript-args\") body; do not change signatures, parameter names, other functions or tests, and add no #[allow] attributes.",
-      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test popup_macos osascript_args 2>&1 | grep -qE 'test result: ok\. 1 passed'",
+      "accept": "git diff --quiet ntfyer-red -- tests Cargo.toml && cargo test -q --test popup_macos osascript_args 2>&1 | grep -qE 'test result: ok\\. 1 passed'",
       "forbid": [
         "new_deps"
       ],
