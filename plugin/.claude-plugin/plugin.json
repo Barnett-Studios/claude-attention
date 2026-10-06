@@ -1,8 +1,10 @@
 {
-  "name": "claude-attention",
+  "name": "ntfyer",
   "version": "0.1.0",
-  "description": "macOS popup, chime and terminal bell when Claude Code finishes or needs you — with a configurable icon and sound, and per-project on/off switches.",
-  "author": { "name": "Yoan Dimitrov" },
-  "license": "MIT",
-  "keywords": ["notifications", "macos", "hooks", "attention"]
+  "description": "Claude Code adapter for ntfyer: a popup, chime and terminal bell when Claude finishes or needs you (macOS, Linux). Requires the ntfyer binary.",
+  "author": { "name": "Barnett Studios" },
+  "homepage": "https://github.com/Barnett-Studios/ntfyer",
+  "repository": "https://github.com/Barnett-Studios/ntfyer",
+  "license": "MIT OR Apache-2.0",
+  "keywords": ["notifications", "attention", "hooks", "macos", "linux"]
 }

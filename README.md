@@ -1,97 +1,107 @@
-# claude-attention
+# ntfyer
 
-[![test](https://github.com/Barnett-Studios/claude-attention/actions/workflows/test.yml/badge.svg)](https://github.com/Barnett-Studios/claude-attention/actions/workflows/test.yml)
+[![CI](https://github.com/Barnett-Studios/ntfyer/actions/workflows/ci.yml/badge.svg)](https://github.com/Barnett-Studios/ntfyer/actions/workflows/ci.yml)
+[![Crates.io](https://img.shields.io/crates/v/ntfyer)](https://crates.io/crates/ntfyer)
+[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 
-A Claude Code plugin that gets your attention when Claude finishes a turn or needs input:
-a macOS notification popup with **your choice of icon**, a **configurable chime**, and the
-terminal bell — each switchable globally or per project.
+**Interaction plane · Active** — under development; the surface still moves.
+See the [component map](https://github.com/Barnett-Studios) for how this fits the rest.
 
-macOS only for now (Apple Silicon and Intel). On other platforms only the terminal bell fires.
+**Get a human's attention when an agent — or any script — needs them.**
+
+`ntfyer signal` fires a desktop popup, a chime and the terminal bell, on macOS and Linux. Any agent
+harness, git hook or shell script can call it: it takes flags or a small JSON envelope on stdin,
+and it is **fail-open by construction** — it always exits 0, and a missing backend only means a
+channel does not fire. It signals the human and never writes anything back into the caller.
+
+> Part of the Barnett Studios agentic-harness toolkit → cxpak · commitward · **ntfyer** · …
 
 ## Install
 
+```sh
+brew tap Barnett-Studios/tap && brew install ntfyer     # or: cargo install ntfyer
+ntfyer doctor                                           # what this machine can do
 ```
-/plugin marketplace add Barnett-Studios/claude-attention
-/plugin install claude-attention@claude-attention
+
+- **macOS** needs the Xcode Command Line Tools (`xcode-select --install`): the popup comes from a
+  tiny notifier app ntfyer compiles on first use. The first popup asks you to allow
+  notifications for **ntfyer** (or allow it under System Settings → Notifications).
+- **Linux** uses `notify-send` (libnotify) or `gdbus`, and `pw-play` / `paplay` / `aplay` for the
+  chime.
+
+## Use
+
+```sh
+ntfyer signal --message "Build finished"                  # title defaults to the directory name
+ntfyer signal --title "CI" --message "Red" --project ~/src/app
+printf '{"message":"Needs input","event":"notification"}' | ntfyer signal --json
 ```
 
-Requirements: `jq`, and the Xcode Command Line Tools (`xcode-select --install`) — the popup comes
-from a tiny app compiled on your machine at session start, under
-`~/Library/Application Support/claude-attention/`.
+The envelope (all fields optional): `message`, `title`, `project`, `event`, `session`, `quiet`.
+Full contract — commands, exit codes, guarantees: [CONTRACT.md](CONTRACT.md).
 
-### First run: allow notifications
+### Claude Code
 
-The popup is posted by a small app called **Claude Attention**. The first time it fires, macOS may
-deny it without asking. Open **System Settings → Notifications → Claude Attention** and turn on
-*Allow notifications* (Banners or Alerts). Until then the plugin falls back to a plain
-AppleScript notification (Script Editor's icon).
+```
+/plugin marketplace add Barnett-Studios/ntfyer
+/plugin install ntfyer@ntfyer
+```
 
-The app is compiled when a session starts. If a popup is due before that has happened (the plugin
-was just installed or updated mid-session), the compile starts in the background and that one popup
-uses the fallback — hooks only get 10 seconds, too short to compile in.
+The plugin is a thin adapter ([`plugin/bin/claude-hook.sh`](plugin/bin/claude-hook.sh)): it maps
+the `Stop` and `Notification` hook payloads to an envelope and calls `ntfyer signal --json`. It
+stays quiet for subagents and for a `Stop` while background tasks are still running. Needs the
+`ntfyer` binary and `jq`.
+
+**Coming from `claude-attention`?** That plugin is now this one. Move over with:
+
+```
+/plugin uninstall claude-attention@claude-attention
+/plugin marketplace remove claude-attention
+/plugin marketplace add Barnett-Studios/ntfyer
+/plugin install ntfyer@ntfyer
+```
+
+and move `~/.claude/attention.json` to `~/.config/ntfyer/config.json` (same keys). macOS asks once
+to allow notifications for **ntfyer**.
+
+### Git hooks and scripts
+
+See [`examples/git-hooks/post-merge`](examples/git-hooks/post-merge). Any long-running command
+works the same way: `make release; ntfyer signal --message "release done"`.
 
 ## Configure
 
-Create `~/.claude/attention.json` (global) and/or `<project>/.claude/attention.json` (overrides the
-global file key by key). Every key is optional; a missing file or key keeps the default.
+`~/.config/ntfyer/config.json` (or `$XDG_CONFIG_HOME/ntfyer/config.json`), overridden key by key by
+`<project>/.ntfyer.json`. Every key is optional; `null` or a malformed file keeps the defaults.
 
 ```json
-{
-  "enabled": true,
-  "bell": true,
-  "sound": "Glass",
-  "popup": true,
-  "icon": "claude"
-}
+{ "enabled": true, "bell": true, "sound": "Pop", "popup": true, "icon": "claude" }
 ```
 
 | Key | Values | Default |
 |---|---|---|
 | `enabled` | `false` silences everything | `true` |
-| `bell` | terminal bell on/off | `true` |
-| `sound` | `false`, `true` (Glass), a macOS sound name (`Ping`, `Hero`, `Submarine`, … from `/System/Library/Sounds`), or a path to any audio file (`~` allowed) | `true` |
-| `popup` | notification popup on/off | `true` |
-| `icon` | `"claude"` (the installed Claude desktop app's icon), `false` (generic), or a path to an image (`.icns`, `.png`, `.jpg`, …; `~` allowed, relative paths resolve against `~/.claude/`) | `"claude"` |
+| `bell` | terminal bell (only when there is a controlling terminal) | `true` |
+| `sound` | `false`, `true` (OS default), a system sound name (macOS: `Pop`, `Hero`, …; Linux: freedesktop names such as `complete`), or a file path (`~/x.wav`, `./x.wav`) — files from the global config only | `true` |
+| `popup` | desktop popup | `true` |
+| `icon` | `"claude"` (the Claude desktop app's icon, if installed), `false`, or an image path — global config only | `"claude"` |
 
-`icon` is read from the **global** file only: macOS takes a notification's icon from the app that
-posts it, so there is one icon per machine. Notification Center also keeps the first icon it sees
-for an app forever, so **each icon gets its own app identity**: after you change `icon`, the next
-popup builds a new *Claude Attention* app (the old one is removed), and macOS asks you to allow
-notifications for it once — or, if it doesn't ask, allow it under System Settings → Notifications.
-Until you do, popups fall back to the plain AppleScript notification. An outdated *Claude Attention*
-entry may stay listed in Notifications settings; it is harmless.
-
-A configured icon path that doesn't exist falls back to the generic icon and is logged to
-`~/.claude/attention.log`.
-
-The `"claude"` icon is read from your local `/Applications/Claude.app`; this plugin does not ship
-it. Without the desktop app installed, `"claude"` falls back to the generic icon.
-
-`CLAUDE_ATTENTION=off` in the environment silences everything for that session.
-
-## Behaviour
-
-- Fires on the `Stop` and `Notification` hooks.
-- Skips subagent events, and `Stop` while background tasks are still running (the session will
-  wake again on its own).
-- Debounced per project: one signal per 8 seconds, so a manual call plus a hook never doubles up,
-  while a session in another project still gets through.
-- Fail-open: it never blocks or breaks a session.
-- Each decision is logged to `~/.claude/attention.log` (last 200 lines).
-
-You can also signal from your own scripts:
-
-```bash
-printf '{"message":"Need a decision"}' | <plugin>/bin/attention.sh
-```
-
-## Development
-
-```bash
-tests/run.sh        # hook behaviour (dry run, no popups)
-tests/notifier.sh   # app build, icon handling, rebuild avoidance (needs swiftc)
-```
+On macOS each icon gets its own notifier identity (Notification Center caches icons per app
+forever), so changing `icon` asks you to allow notifications once more. `NTFYER=off` silences
+everything. Decisions are logged to `~/.local/state/ntfyer/log`.
 
 ## License
 
-MIT
+Licensed under either of [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE) at your option.
+Unless you explicitly state otherwise, any contribution you intentionally submit for
+inclusion in the work shall be dual-licensed as above, without any additional terms.
+
+---
+
+Built by [Barnett Studios](https://barnett-studios.com/) — part of the agentic-harness
+toolkit: [cxpak](https://github.com/Barnett-Studios/cxpak) ·
+[commitward](https://github.com/Barnett-Studios/commitward) ·
+[cascadr](https://github.com/Barnett-Studios/cascadr) ·
+[abproof](https://github.com/Barnett-Studios/abproof) ·
+[cordon](https://github.com/Barnett-Studios/cordon) ·
+[slicr](https://github.com/Barnett-Studios/slicr) · **ntfyer**.
