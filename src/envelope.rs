@@ -34,5 +34,10 @@ pub fn default_message(event: Option<&str>) -> &'static str {
 /// The project's display name: its last path component with `\n` and `\r` removed, or the whole
 /// path (lossy) when it has no last component (e.g. `/`).
 pub fn project_label(project: &Path) -> String {
-    unimplemented!("delegated: project-label")
+    if let Some(last) = project.components().last() {
+        let s = last.as_os_str().to_string_lossy().to_string();
+        s.replace('\n', "").replace('\r', "")
+    } else {
+        project.to_string_lossy().to_string()
+    }
 }
