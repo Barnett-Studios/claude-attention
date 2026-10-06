@@ -55,7 +55,23 @@ pub fn icon_source(
     default_icon: &Path,
     exists: &dyn Fn(&Path) -> bool,
 ) -> Option<PathBuf> {
-    unimplemented!("delegated: icon-source")
+    match icon {
+        Icon::Default => {
+            if exists(default_icon) {
+                Some(default_icon.to_path_buf())
+            } else {
+                None
+            }
+        }
+        Icon::None => None,
+        Icon::File(p) => {
+            if exists(p) {
+                Some(p.to_path_buf())
+            } else {
+                None
+            }
+        }
+    }
 }
 
 /// `osascript` arguments for the fallback popup: `-e`, then
