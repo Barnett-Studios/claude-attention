@@ -21,5 +21,21 @@ pub fn stamp_path(state_dir: &Path, project: &Path) -> PathBuf {
 /// creates the parent directories, writes `now`, and returns `true` — also when writing fails
 /// (fail-open: better a double signal than a missed one).
 pub fn admit(stamp: &Path, now: u64, window: u64) -> bool {
-    unimplemented!("delegated: debounce-admit")
+    let last = if let Ok(contents) = std::fs::read_to_string(stamp) {
+        contents.trim().parse::<u64>().ok().unwrap_or(0)
+    } else {
+        0
+    };
+
+    let elapsed = now.saturating_sub(last);
+    if elapsed < window {
+        return false;
+    }
+
+    if let Some(parent) = stamp.parent() {
+        std::fs::create_dir_all(parent).ok();
+    }
+
+    let _ = std::fs::write(stamp, format!("{}", now));
+    true
 }
