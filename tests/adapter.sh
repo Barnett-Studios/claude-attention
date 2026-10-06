@@ -93,5 +93,46 @@ check "jq missing: silent exit 0" "0|" "$rc|$out"
 d="$(fresh)"
 check "garbage payload still exits 0" "0" "$(run "$d" 'not json' >/dev/null; echo $?)"
 
+d="$(fresh)"
+check "agent_type alone (main session started with --agent) still signals" $'bell\npopup:Claude Code · proj|Finished and waiting for you.' \
+  "$(run "$d" '{"hook_event_name":"Stop","agent_type":"reviewer","cwd":"'"$d/proj"'"}')"
+
+d="$(fresh)"
+check "non-string cwd: subagent event stays quiet" "" "$(run "$d" '{"hook_event_name":"SubagentStop","cwd":5}')"
+
+d="$(fresh)"
+check "non-string transcript_path is ignored" $'bell\npopup:Claude Code · proj|Finished and waiting for you.' \
+  "$(run "$d" '{"hook_event_name":"Stop","transcript_path":5,"cwd":"'"$d/proj"'"}')"
+
+d="$(fresh)"
+check "background_tasks as an object is ignored" $'bell\npopup:Claude Code · proj|Finished and waiting for you.' \
+  "$(run "$d" '{"hook_event_name":"Stop","background_tasks":{"a":1},"cwd":"'"$d/proj"'"}')"
+
+d="$(fresh)"
+check "background_tasks with non-object entries is ignored" $'bell\npopup:Claude Code · proj|Finished and waiting for you.' \
+  "$(run "$d" '{"hook_event_name":"Stop","background_tasks":["x",3],"cwd":"'"$d/proj"'"}')"
+
+d="$(fresh)"
+check "non-string message falls back to the default text" $'bell\npopup:Claude Code · proj|Needs your attention.' \
+  "$(run "$d" '{"hook_event_name":"Notification","message":{"x":1},"cwd":"'"$d/proj"'"}')"
+
+d="$(fresh)"
+check "unparseable subagent payload stays quiet" "" "$(run "$d" '{"hook_event_name":"SubagentStop", broken')"
+
+d="$(fresh)"
+check "garbage payload signals generically" $'bell\npopup:Claude Code · proj|Needs your attention.' "$(run "$d" 'not json')"
+
+d="$(fresh)"
+check "top-level array signals generically" $'bell\npopup:Claude Code · proj|Needs your attention.' "$(run "$d" '[1]')"
+
+# --build: SessionStart's build step uses the same ntfyer lookup as the hook
+d="$(fresh)"
+fakehome="$d/home"; mkdir -p "$fakehome/.cargo/bin"
+printf '#!/bin/sh\necho "$@" > "%s/build-args"\n' "$d" > "$fakehome/.cargo/bin/ntfyer"; chmod +x "$fakehome/.cargo/bin/ntfyer"
+set +e
+out="$(cd "$d/proj" && env -i HOME="$fakehome" PATH="/usr/bin:/bin" /bin/bash "$hook" --build </dev/null)"; rc=$?
+set -e
+check "--build finds ntfyer off PATH, prints nothing" "0||build" "$rc|$out|$(cat "$d/build-args" 2>/dev/null)"
+
 printf '%d passed, %d failed\n' "$pass" "$fail"
 [[ "$fail" -eq 0 ]]

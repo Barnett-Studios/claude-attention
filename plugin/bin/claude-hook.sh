@@ -3,8 +3,12 @@
 # an ntfyer envelope and runs `ntfyer signal --json`. This is the only Claude-specific code: which
 # events stay quiet is adapter policy, the signal itself is ntfyer's.
 #
-# quiet when: a subagent event, a payload carrying agent_id/agent_type or a subagent transcript, or
-# a Stop while background tasks are still running (the session wakes again on its own).
+#   claude-hook.sh            Stop / Notification hook: signal (or stay quiet)
+#   claude-hook.sh --build    SessionStart hook: `ntfyer build`, silently (stdout reaches Claude)
+#
+# quiet when: a Subagent* event, a payload carrying agent_id (present only inside a subagent), a
+# subagent transcript, or a Stop while background tasks are still running (the session wakes again
+# on its own). agent_type alone is not a subagent: a main session started with --agent carries it.
 #
 # Fail-open: no ntfyer or no jq → exit 0 without a signal. Deliberately no `set -e`: a hook must
 # never fail the session.
@@ -18,27 +22,46 @@ if [[ -z "$ntfyer" ]]; then
   done
 fi
 [[ -n "$ntfyer" ]] || exit 0
-command -v jq >/dev/null 2>&1 || exit 0
 
+if [[ "${1:-}" == "--build" ]]; then
+  "$ntfyer" build >/dev/null 2>&1
+  exit 0
+fi
+
+command -v jq >/dev/null 2>&1 || exit 0
 payload="$(cat 2>/dev/null || true)"
+
+# every field is type-checked: a malformed field is treated as absent, never as a reason to fall
+# back to a loud generic signal
 envelope="$(printf '%s' "$payload" | jq -c --arg pwd "$PWD" '
-  (.cwd // $pwd) as $project
-  | (.hook_event_name // "") as $event
+  if type != "object" then error("not an object") else . end
+  | ((.cwd | strings) // $pwd) as $project
+  | ((.hook_event_name | strings) // "") as $event
   | {
-      message: (.message // null),
+      message: ((.message | strings) // null),
       project: $project,
       event: (if $event == "" then null else ($event | ascii_downcase) end),
-      session: (.session_id // null),
+      session: ((.session_id | strings) // null),
       title: ("Claude Code · " + ($project | split("/") | map(select(. != "")) | last // "/")),
       quiet: (
         ($event | startswith("Subagent"))
-        or ((.agent_id // .agent_type // "") != "")
-        or ((.transcript_path // .agent_transcript_path // "") | test("/subagents/"))
-        or ($event == "Stop" and ([.background_tasks // [] | .[] | select(.status == "running")] | length) > 0)
+        or (((.agent_id | strings) // "") != "")
+        or (((.transcript_path | strings) // (.agent_transcript_path | strings) // "") | test("/subagents/"))
+        or ($event == "Stop"
+            and ([((.background_tasks | arrays) // [])[] | objects | select(.status == "running")] | length) > 0)
       )
     }' 2>/dev/null)" || envelope=""
-# an unreadable payload still signals, as a plain "needs your attention" for the hook's directory
-[[ -n "$envelope" ]] || envelope="$(jq -cn --arg pwd "$PWD" '{project: $pwd, title: ("Claude Code · " + ($pwd | split("/") | map(select(. != "")) | last // "/"))}')"
+
+if [[ -z "$envelope" ]]; then
+  # unreadable payload: stay quiet if it looks like a subagent's, else a plain "needs your
+  # attention" for the hook's directory
+  case "$payload" in
+    *Subagent* | *'"agent_id"'* | */subagents/*) quiet=true ;;
+    *) quiet=false ;;
+  esac
+  envelope="$(jq -cn --arg pwd "$PWD" --argjson quiet "$quiet" \
+    '{project: $pwd, quiet: $quiet, title: ("Claude Code · " + ($pwd | split("/") | map(select(. != "")) | last // "/"))}')"
+fi
 
 printf '%s' "$envelope" | "$ntfyer" signal --json
 exit 0

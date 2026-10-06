@@ -52,6 +52,18 @@ the `Stop` and `Notification` hook payloads to an envelope and calls `ntfyer sig
 stays quiet for subagents and for a `Stop` while background tasks are still running. Needs the
 `ntfyer` binary and `jq`.
 
+**Coming from `claude-attention`?** That plugin is now this one. Move over with:
+
+```
+/plugin uninstall claude-attention@claude-attention
+/plugin marketplace remove claude-attention
+/plugin marketplace add Barnett-Studios/ntfyer
+/plugin install ntfyer@ntfyer
+```
+
+and move `~/.claude/attention.json` to `~/.config/ntfyer/config.json` (same keys). macOS asks once
+to allow notifications for **ntfyer**.
+
 ### Git hooks and scripts
 
 See [`examples/git-hooks/post-merge`](examples/git-hooks/post-merge). Any long-running command
