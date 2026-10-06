@@ -8,7 +8,9 @@ pub const KEEP_LINES: usize = 200;
 /// U+2028 / U+2029 with a space, so a field can neither forge a log line nor smuggle terminal
 /// escape sequences into whoever tails the log.
 pub fn sanitize(field: &str) -> String {
-    unimplemented!("delegated: log-sanitize")
+    field.chars()
+        .map(|c| if c.is_control() || c == '\u{2028}' || c == '\u{2029}' { ' ' } else { c })
+        .collect()
 }
 
 /// Creates parent directories, appends `line` plus `\n`, then — when the file holds more than

@@ -6,3 +6,4 @@
 {"agent_id":"local:8081","trust_before":0.5165812040441177,"trust_after":0.527329317555147,"run_id":"project-label","timestamp":"2026-10-06T10:43:50.748Z"}
 {"agent_id":"local:8081","trust_before":0.527329317555147,"trust_after":0.5364652140395221,"run_id":"stamp-path","timestamp":"2026-10-06T10:45:10.776Z"}
 {"agent_id":"local:8081","trust_before":0.5364652140395221,"trust_after":0.5442307260512409,"run_id":"debounce-admit","timestamp":"2026-10-06T10:45:30.117Z"}
+{"agent_id":"local:8081","trust_before":0.5442307260512409,"trust_after":0.5331843524376724,"run_id":"log-sanitize","timestamp":"2026-10-06T10:45:42.849Z"}
