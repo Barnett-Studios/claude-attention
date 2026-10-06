@@ -25,7 +25,11 @@ pub fn icon_digest(file: Option<&Path>) -> String {
 /// The bundle name and id for an icon digest (see `Identity`). A digest shorter than 12 chars is
 /// used whole.
 pub fn identity(digest: &str) -> Identity {
-    unimplemented!("delegated: bundle-identity")
+    let short = if digest.len() >= 12 { &digest[..12] } else { digest };
+    Identity {
+        bundle_name: format!("Ntfyer-{}.app", short),
+        bundle_id: format!("{}.{}", ID_PREFIX, short),
+    }
 }
 
 /// Lowercase hex sha256 over the bytes of `SWIFT_SOURCE` immediately followed (no separator) by the

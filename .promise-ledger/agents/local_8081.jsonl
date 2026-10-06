@@ -9,3 +9,4 @@
 {"agent_id":"local:8081","trust_before":0.5442307260512409,"trust_after":0.5331843524376724,"run_id":"log-sanitize","timestamp":"2026-10-06T10:45:42.849Z"}
 {"agent_id":"local:8081","trust_before":0.5331843524376724,"trust_after":0.5414419936896686,"run_id":"lock-acquire","timestamp":"2026-10-06T10:47:40.323Z"}
 {"agent_id":"local:8081","trust_before":0.5414419936896686,"trust_after":0.5572845181656301,"run_id":"gdbus-args","timestamp":"2026-10-06T10:48:23.492Z"}
+{"agent_id":"local:8081","trust_before":0.5572845181656301,"trust_after":0.5619271345584327,"run_id":"bundle-identity","timestamp":"2026-10-06T10:49:34.283Z"}
