@@ -1,0 +1,55 @@
+//! One signal per burst per project, so a manual call followed by a hook never doubles up while
+//! another project's session still gets through.
+
+use sha2::{Digest, Sha256};
+use std::path::{Path, PathBuf};
+
+pub const WINDOW_SECS: u64 = 8;
+
+/// `state_dir/debounce/<first 12 lowercase hex chars of sha256(project path bytes)>.last`
+pub fn stamp_path(state_dir: &Path, project: &Path) -> PathBuf {
+    let mut hasher = Sha256::new();
+    hasher.update(project.as_os_str().as_encoded_bytes());
+    let result = hasher.finalize();
+    let hash_hex: String = result.iter().map(|b| format!("{:02x}", b)).collect();
+    let hash_short = &hash_hex[..12];
+    state_dir
+        .join("debounce")
+        .join(format!("{}.last", hash_short))
+}
+
+/// Reads the last-signal time from `stamp` (whole seconds; missing or unparseable = 0). Inside the
+/// window (`now - last < window`, saturating) → `false` and the stamp is left alone. Otherwise
+/// creates the parent directories, writes `now`, and returns `true` — also when writing fails
+/// (fail-open: better a double signal than a missed one). The read and the write happen under an
+/// exclusive lock on the stamp, so concurrent callers (a Stop and a Notification hook at once)
+/// admit exactly one.
+pub fn admit(stamp: &Path, now: u64, window: u64) -> bool {
+    use std::io::{Read, Seek, SeekFrom, Write};
+    if let Some(parent) = stamp.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    let opened = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(stamp);
+    let Ok(mut file) = opened else { return true };
+    if file.lock().is_err() {
+        return true;
+    }
+    let mut text = String::new();
+    let last = match file.read_to_string(&mut text) {
+        Ok(_) => text.trim().parse::<u64>().unwrap_or(0),
+        Err(_) => 0,
+    };
+    if now.saturating_sub(last) < window {
+        return false;
+    }
+    let _ = file
+        .set_len(0)
+        .and_then(|_| file.seek(SeekFrom::Start(0)))
+        .and_then(|_| write!(file, "{now}"));
+    true
+}

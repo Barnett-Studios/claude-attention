@@ -1,0 +1,71 @@
+//! Linux: freedesktop notifications. The icon is passed per notification, so — unlike macOS —
+//! no per-icon app identity is needed.
+
+use std::path::Path;
+use std::process::{Command, Stdio};
+
+pub const APP_NAME: &str = "ntfyer";
+
+/// `-a ntfyer`, then `-i <icon>` when there is one, then `--`, `title`, `body`.
+pub fn notify_send_args(title: &str, body: &str, icon: Option<&Path>) -> Vec<String> {
+    let mut args = vec!["-a".to_string(), APP_NAME.to_string()];
+    if let Some(i) = icon {
+        args.push("-i".to_string());
+        args.push(i.to_string_lossy().into_owned());
+    }
+    args.extend(["--".to_string(), title.to_string(), body.to_string()]);
+    args
+}
+
+/// Arguments for `gdbus` calling `org.freedesktop.Notifications.Notify` on the session bus:
+/// `call --session --dest org.freedesktop.Notifications --object-path /org/freedesktop/Notifications
+/// --method org.freedesktop.Notifications.Notify -- ntfyer 0 <icon> <title> <body> [] {} -1`
+/// (`--` so a title or body starting with `-` is never read as an option). gdbus parses each
+/// parameter as GVariant text, so icon (empty when none), title and body are passed as GVariant
+/// string literals: wrapped in single quotes, with every `\` written as `\\` and every `'` as
+/// `\'`.
+pub fn gdbus_args(title: &str, body: &str, icon: Option<&Path>) -> Vec<String> {
+    let icon = icon
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let mut args: Vec<String> = [
+        "call",
+        "--session",
+        "--dest",
+        "org.freedesktop.Notifications",
+        "--object-path",
+        "/org/freedesktop/Notifications",
+        "--method",
+        "org.freedesktop.Notifications.Notify",
+        "--",
+        APP_NAME,
+        "0",
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect();
+    args.extend([gvariant_str(&icon), gvariant_str(title), gvariant_str(body)]);
+    args.extend(["[]", "{}", "-1"].iter().map(|s| s.to_string()));
+    args
+}
+
+/// A GVariant text-format string literal.
+fn gvariant_str(s: &str) -> String {
+    format!("'{}'", s.replace('\\', "\\\\").replace('\'', "\\'"))
+}
+
+/// Posts through `notify-send`, falling back to `gdbus`. Returns whether either succeeded.
+pub fn notify(title: &str, body: &str, icon: Option<&Path>) -> bool {
+    let run = |prog: &str, args: Vec<String>| {
+        super::which(prog)
+            && Command::new(prog)
+                .args(args)
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status()
+                .map(|s| s.success())
+                .unwrap_or(false)
+    };
+    run("notify-send", notify_send_args(title, body, icon))
+        || run("gdbus", gdbus_args(title, body, icon))
+}

@@ -1,0 +1,14 @@
+{"agent_id":"local:8081","trust_before":0.5,"trust_after":0.5220588235294118,"run_id":"paths-from-lookup","timestamp":"2026-10-06T10:39:37.769Z"}
+{"agent_id":"local:8081","trust_before":0.5220588235294118,"trust_after":0.5143382352941177,"run_id":"expand-home","timestamp":"2026-10-06T10:39:48.742Z"}
+{"agent_id":"local:8081","trust_before":0.5143382352941177,"trust_after":0.5342463235294118,"run_id":"parse-sound","timestamp":"2026-10-06T10:40:40.800Z"}
+{"agent_id":"local:8081","trust_before":0.5342463235294118,"trust_after":0.5246976102941177,"run_id":"parse-envelope","timestamp":"2026-10-06T10:43:27.334Z"}
+{"agent_id":"local:8081","trust_before":0.5246976102941177,"trust_after":0.5165812040441177,"run_id":"default-message","timestamp":"2026-10-06T10:43:36.463Z"}
+{"agent_id":"local:8081","trust_before":0.5165812040441177,"trust_after":0.527329317555147,"run_id":"project-label","timestamp":"2026-10-06T10:43:50.748Z"}
+{"agent_id":"local:8081","trust_before":0.527329317555147,"trust_after":0.5364652140395221,"run_id":"stamp-path","timestamp":"2026-10-06T10:45:10.776Z"}
+{"agent_id":"local:8081","trust_before":0.5364652140395221,"trust_after":0.5442307260512409,"run_id":"debounce-admit","timestamp":"2026-10-06T10:45:30.117Z"}
+{"agent_id":"local:8081","trust_before":0.5442307260512409,"trust_after":0.5331843524376724,"run_id":"log-sanitize","timestamp":"2026-10-06T10:45:42.849Z"}
+{"agent_id":"local:8081","trust_before":0.5331843524376724,"trust_after":0.5414419936896686,"run_id":"lock-acquire","timestamp":"2026-10-06T10:47:40.323Z"}
+{"agent_id":"local:8081","trust_before":0.5414419936896686,"trust_after":0.5572845181656301,"run_id":"gdbus-args","timestamp":"2026-10-06T10:48:23.492Z"}
+{"agent_id":"local:8081","trust_before":0.5572845181656301,"trust_after":0.5619271345584327,"run_id":"bundle-identity","timestamp":"2026-10-06T10:49:34.283Z"}
+{"agent_id":"local:8081","trust_before":0.5619271345584327,"trust_after":0.5482262996687854,"run_id":"icon-source","timestamp":"2026-10-06T10:51:30.797Z"}
+{"agent_id":"local:8081","trust_before":0.5482262996687854,"trust_after":0.5542276488361146,"run_id":"osascript-args","timestamp":"2026-10-06T10:51:56.058Z"}
