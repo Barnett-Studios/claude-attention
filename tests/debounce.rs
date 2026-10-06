@@ -63,3 +63,19 @@ fn admit_clock_going_backwards_does_not_block_forever() {
         "saturating: now < last counts as inside the window"
     );
 }
+
+#[test]
+fn admit_concurrent_callers_admit_exactly_one() {
+    let d = tempfile::tempdir().expect("tempdir");
+    let stamp = d.path().join("x.last");
+    let admitted: usize = std::thread::scope(|s| {
+        let handles: Vec<_> = (0..16)
+            .map(|_| s.spawn(|| admit(&stamp, 1000, 8)))
+            .collect();
+        handles
+            .into_iter()
+            .map(|h| usize::from(h.join().expect("thread")))
+            .sum()
+    });
+    assert_eq!(admitted, 1);
+}

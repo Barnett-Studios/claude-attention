@@ -19,30 +19,39 @@ pub fn notify_send_args(title: &str, body: &str, icon: Option<&Path>) -> Vec<Str
 
 /// Arguments for `gdbus` calling `org.freedesktop.Notifications.Notify` on the session bus:
 /// `call --session --dest org.freedesktop.Notifications --object-path /org/freedesktop/Notifications
-/// --method org.freedesktop.Notifications.Notify -- ntfyer 0 <icon or ""> <title> <body> [] {} -1`
-/// (`--` so a title or body starting with `-` is never read as an option)
+/// --method org.freedesktop.Notifications.Notify -- ntfyer 0 <icon> <title> <body> [] {} -1`
+/// (`--` so a title or body starting with `-` is never read as an option). gdbus parses each
+/// parameter as GVariant text, so icon (empty when none), title and body are passed as GVariant
+/// string literals: wrapped in single quotes, with every `\` written as `\\` and every `'` as
+/// `\'`.
 pub fn gdbus_args(title: &str, body: &str, icon: Option<&Path>) -> Vec<String> {
-    let args = vec![
-        "call".to_string(),
-        "--session".to_string(),
-        "--dest".to_string(),
-        "org.freedesktop.Notifications".to_string(),
-        "--object-path".to_string(),
-        "/org/freedesktop/Notifications".to_string(),
-        "--method".to_string(),
-        "org.freedesktop.Notifications.Notify".to_string(),
-        "--".to_string(),
-        APP_NAME.to_string(),
-        "0".to_string(),
-        icon.map(|p| p.to_string_lossy().to_string())
-            .unwrap_or_default(),
-        title.to_string(),
-        body.to_string(),
-        "[]".to_string(),
-        "{}".to_string(),
-        "-1".to_string(),
-    ];
+    let icon = icon
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let mut args: Vec<String> = [
+        "call",
+        "--session",
+        "--dest",
+        "org.freedesktop.Notifications",
+        "--object-path",
+        "/org/freedesktop/Notifications",
+        "--method",
+        "org.freedesktop.Notifications.Notify",
+        "--",
+        APP_NAME,
+        "0",
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect();
+    args.extend([gvariant_str(&icon), gvariant_str(title), gvariant_str(body)]);
+    args.extend(["[]", "{}", "-1"].iter().map(|s| s.to_string()));
     args
+}
+
+/// A GVariant text-format string literal.
+fn gvariant_str(s: &str) -> String {
+    format!("'{}'", s.replace('\\', "\\\\").replace('\'', "\\'"))
 }
 
 /// Posts through `notify-send`, falling back to `gdbus`. Returns whether either succeeded.

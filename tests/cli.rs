@@ -369,6 +369,55 @@ fn config_path_prints_effective_paths() {
 }
 
 #[test]
+fn bell_is_never_written_to_stdout() {
+    let c = Case::new();
+    c.global(r#"{"sound":false,"popup":false}"#);
+    let (out, code) = c.run(
+        &["signal", "--message", "m"],
+        "",
+        &[("NTFYER_DRY_RUN", "0")],
+    );
+    assert_eq!(
+        (out.as_str(), code),
+        ("", 0),
+        "stdout belongs to the caller (a harness may read it)"
+    );
+}
+
+#[test]
+fn dot_project_is_labelled_by_its_real_name() {
+    let c = Case::new();
+    assert_eq!(
+        c.run(&["signal", "--project", ".", "--message", "m"], "", &[])
+            .0,
+        all("proj", "m")
+    );
+}
+
+#[test]
+fn dot_and_absolute_project_share_a_debounce_key() {
+    let c = Case::new();
+    let abs = c.proj.to_string_lossy().into_owned();
+    c.run(&["signal", "--project", &abs, "--message", "m"], "", &[]);
+    assert_eq!(
+        c.run(&["signal", "--project", ".", "--message", "m"], "", &[])
+            .0,
+        ""
+    );
+}
+
+#[test]
+fn empty_project_means_the_working_directory() {
+    let c = Case::new();
+    let input = r#"{"message":"m","project":""}"#;
+    assert_eq!(
+        c.signal_json(input).0,
+        all("proj", "m"),
+        "never an empty title"
+    );
+}
+
+#[test]
 fn usage_error_exits_64() {
     let c = Case::new();
     assert_eq!(c.run(&["bogus"], "", &[]).1, 64);

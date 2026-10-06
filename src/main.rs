@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 use ntfyer::envelope::{self, Envelope};
 use ntfyer::popup::macos_app::{self, Built};
 use ntfyer::signal::{self, Context};
-use std::io::Read;
+use std::io::{IsTerminal, Read};
 use std::path::PathBuf;
 use std::process::ExitCode;
 
@@ -58,6 +58,8 @@ enum Format {
 }
 
 const EXIT_USAGE: u8 = 64;
+/// An envelope is a few hundred bytes; never buffer an unbounded stream.
+const MAX_ENVELOPE: u64 = 1 << 20;
 
 fn main() -> ExitCode {
     let cli = match Cli::try_parse() {
@@ -91,9 +93,11 @@ fn main() -> ExitCode {
             event,
             json,
         } => {
-            let mut env = if json {
+            let mut env = if json && !std::io::stdin().is_terminal() {
                 let mut input = String::new();
-                let _ = std::io::stdin().read_to_string(&mut input);
+                let _ = std::io::stdin()
+                    .take(MAX_ENVELOPE)
+                    .read_to_string(&mut input);
                 envelope::parse(&input)
             } else {
                 Envelope::default()
@@ -146,6 +150,15 @@ fn build(ctx: &Context) -> ExitCode {
         }
         Err(e) => {
             eprintln!("ntfyer: {e}");
+            // a detached build has no terminal: the log is where its failure is seen
+            ntfyer::log::append(
+                &ctx.paths.log_file(),
+                &format!(
+                    "{} build failed: {}",
+                    signal::timestamp(ctx.now),
+                    ntfyer::log::sanitize(&e.to_string())
+                ),
+            );
             ExitCode::FAILURE
         }
     }

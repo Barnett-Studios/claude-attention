@@ -16,10 +16,23 @@ pub struct Envelope {
     pub quiet: bool,
 }
 
-/// Empty or whitespace-only input, malformed JSON, a non-object, or a field of the wrong type →
-/// `Envelope::default()`. Unknown fields are ignored.
+/// Empty or whitespace-only input, malformed JSON or a non-object → `Envelope::default()`. Each
+/// field is read on its own: one of the wrong type is treated as absent without discarding the
+/// others (a malformed `title` must not drop `quiet`). Unknown fields are ignored.
 pub fn parse(input: &str) -> Envelope {
-    serde_json::from_str::<Envelope>(input).unwrap_or_default()
+    let Ok(serde_json::Value::Object(map)) = serde_json::from_str::<serde_json::Value>(input)
+    else {
+        return Envelope::default();
+    };
+    let text = |key: &str| map.get(key).and_then(|v| v.as_str()).map(str::to_string);
+    Envelope {
+        message: text("message"),
+        title: text("title"),
+        project: text("project").map(PathBuf::from),
+        event: text("event"),
+        session: text("session"),
+        quiet: map.get("quiet").and_then(|v| v.as_bool()).unwrap_or(false),
+    }
 }
 
 /// `"Finished and waiting for you."` when `event` equals `stop` ignoring ASCII case, otherwise

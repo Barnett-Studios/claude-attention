@@ -8,6 +8,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
+/// How long a popup may take: a notifier still waiting on the permission prompt is killed and the
+/// caller falls back.
+pub const NOTIFIER_DEADLINE: std::time::Duration = std::time::Duration::from_secs(5);
+
 pub const LSREGISTER: &str =
     "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister";
 
@@ -205,14 +209,16 @@ pub fn notify(
 ) -> bool {
     match ensure(env, icon, false, on_missing_icon) {
         Ok((app, _)) => {
-            let status = Command::new(app.join("Contents/MacOS/Ntfyer"))
-                .args([title, body, group])
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .status();
+            let status = super::run_with_deadline(
+                Command::new(app.join("Contents/MacOS/Ntfyer"))
+                    .args([title, body, group])
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null()),
+                NOTIFIER_DEADLINE,
+            );
             match status.map(|s| s.code()) {
-                Ok(Some(0)) => true,
-                Ok(Some(3)) => {
+                Some(Some(0)) => true,
+                Some(Some(3)) => {
                     // not allowed yet: a LaunchServices launch registers the app with Notification
                     // Center so the user can allow it; this popup still falls back
                     let _ = Command::new("open")

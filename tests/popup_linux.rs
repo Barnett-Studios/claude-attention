@@ -33,9 +33,12 @@ fn gdbus_args_shape() {
         "0",
     ];
     let mut want = v(&prefix);
-    want.extend(v(&["", "T", "B", "[]", "{}", "-1"]));
+    want.extend(v(&["''", "'T'", "'B'", "[]", "{}", "-1"]));
     assert_eq!(gdbus_args("T", "B", None), want);
     let mut want = v(&prefix);
-    want.extend(v(&["/i.png", "T", "B", "[]", "{}", "-1"]));
-    assert_eq!(gdbus_args("T", "B", Some(Path::new("/i.png"))), want);
+    want.extend(v(&["'/i.png'", r"'[it\'s]'", r"'a\\b'", "[]", "{}", "-1"]));
+    assert_eq!(
+        gdbus_args("[it's]", r"a\b", Some(Path::new("/i.png"))),
+        want
+    );
 }

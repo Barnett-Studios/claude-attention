@@ -88,7 +88,9 @@ impl Context {
 /// Runs one signal and returns the logged verdict (`signal` or `skip:<reason>`). Dry-run channel
 /// lines go to `out`.
 pub fn run(env: &Envelope, ctx: &Context, out: &mut dyn Write) -> String {
-    let project = env.project.clone().unwrap_or_else(|| ctx.cwd.clone());
+    let raw = env.project.clone().unwrap_or_else(|| ctx.cwd.clone());
+    // `.` and its absolute path are the same project: same label, config and debounce key
+    let project = std::fs::canonicalize(ctx.cwd.join(&raw)).unwrap_or(raw);
     let label = envelope::project_label(&project);
     let cfg = ctx.config_for(&project);
 
@@ -157,15 +159,11 @@ pub fn run(env: &Envelope, ctx: &Context, out: &mut dyn Write) -> String {
     verdict.to_string()
 }
 
+/// Rings the controlling terminal's bell. Without one (the usual case inside a hook) there is no
+/// bell: stdout belongs to the caller, which may read it, so nothing is ever written there.
 fn ring_bell() {
-    let tty = std::fs::OpenOptions::new().write(true).open("/dev/tty");
-    match tty {
-        Ok(mut t) => {
-            let _ = t.write_all(b"\x07");
-        }
-        Err(_) => {
-            let _ = std::io::stdout().write_all(b"\x07");
-        }
+    if let Ok(mut tty) = std::fs::OpenOptions::new().write(true).open("/dev/tty") {
+        let _ = tty.write_all(b"\x07");
     }
 }
 

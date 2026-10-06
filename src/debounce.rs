@@ -21,23 +21,35 @@ pub fn stamp_path(state_dir: &Path, project: &Path) -> PathBuf {
 /// Reads the last-signal time from `stamp` (whole seconds; missing or unparseable = 0). Inside the
 /// window (`now - last < window`, saturating) → `false` and the stamp is left alone. Otherwise
 /// creates the parent directories, writes `now`, and returns `true` — also when writing fails
-/// (fail-open: better a double signal than a missed one).
+/// (fail-open: better a double signal than a missed one). The read and the write happen under an
+/// exclusive lock on the stamp, so concurrent callers (a Stop and a Notification hook at once)
+/// admit exactly one.
 pub fn admit(stamp: &Path, now: u64, window: u64) -> bool {
-    let last = if let Ok(contents) = std::fs::read_to_string(stamp) {
-        contents.trim().parse::<u64>().ok().unwrap_or(0)
-    } else {
-        0
+    use std::io::{Read, Seek, SeekFrom, Write};
+    if let Some(parent) = stamp.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    let opened = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(stamp);
+    let Ok(mut file) = opened else { return true };
+    if file.lock().is_err() {
+        return true;
+    }
+    let mut text = String::new();
+    let last = match file.read_to_string(&mut text) {
+        Ok(_) => text.trim().parse::<u64>().unwrap_or(0),
+        Err(_) => 0,
     };
-
-    let elapsed = now.saturating_sub(last);
-    if elapsed < window {
+    if now.saturating_sub(last) < window {
         return false;
     }
-
-    if let Some(parent) = stamp.parent() {
-        std::fs::create_dir_all(parent).ok();
-    }
-
-    let _ = std::fs::write(stamp, format!("{}", now));
+    let _ = file
+        .set_len(0)
+        .and_then(|_| file.seek(SeekFrom::Start(0)))
+        .and_then(|_| write!(file, "{now}"));
     true
 }

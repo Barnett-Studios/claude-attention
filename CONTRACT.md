@@ -56,21 +56,26 @@ A notifier must never break its caller.
 |---|---|---|
 | `enabled` | `false` silences everything | `true` |
 | `bell` | terminal bell | `true` |
-| `sound` | `false`; `true` (OS default); a system sound name; a file path (`~` allowed; relative paths are resolved against the global config directory). **Only the global file may name a sound file.** | `true` |
+| `sound` | `false`; `true` (OS default); a system sound name; a file path — anything starting with `~` or containing `/` (a bare `chime.wav` is read as a sound *name*; write `./chime.wav` for a file next to the config). Relative paths resolve against the global config directory. **Only the global file may name a sound file.** | `true` |
 | `popup` | desktop popup | `true` |
 | `icon` | `"claude"` (the Claude desktop app's icon where installed); `false`; an image path. **Global file only** | `"claude"` |
 
 A missing file, a malformed file, a missing key and `null` all keep the default. A project file
-can silence ntfyer, or pick a different system sound for that project. `NTFYER=off` silences
-everything.
+overrides the global one key by key — it can switch channels off *or back on* for that project,
+and pick a different system sound. `NTFYER=off` silences everything, whatever any file says.
 
 ## Behaviour guarantees
 
+- **Envelope fields are independent.** A wrongly typed field is ignored on its own; it never
+  discards `quiet` or the others.
 - **Fail-open.** An absent backend, a missing tool or a broken config degrades a channel. It never
   fails the call.
 - **Debounce.** At most one signal per project per 8 seconds.
 - **Log.** Each decision is one line in `$XDG_STATE_HOME/ntfyer/log` (default
   `~/.local/state/ntfyer/log`), with control characters stripped. The log keeps the last 200 lines.
+- **Bounded.** A popup may take 5 seconds (a notifier still waiting on the permission prompt is
+  killed and the popup falls back); `--json` reads at most 1 MiB and never waits on a terminal.
+- **Nothing on stdout** outside dry-run: the bell goes to the controlling terminal or nowhere.
 - **No compile inside `signal`.** On macOS, if the notifier binary is missing or stale, `signal`
   starts a detached `ntfyer build` and this popup falls back to `osascript`.
 - **One app identity per icon (macOS).** Notification Center keeps the first icon it sees for a

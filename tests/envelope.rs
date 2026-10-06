@@ -31,6 +31,15 @@ fn parse_envelope_partial_and_bad() {
 }
 
 #[test]
+fn parse_envelope_is_lenient_per_field() {
+    let e = parse(r#"{"quiet":true,"title":5,"message":"m","project":["x"]}"#);
+    assert!(e.quiet, "a bad field must not drop quiet");
+    assert_eq!(e.title, None);
+    assert_eq!(e.message.as_deref(), Some("m"));
+    assert_eq!(e.project, None);
+}
+
+#[test]
 fn default_message_cases() {
     assert_eq!(
         default_message(Some("stop")),
