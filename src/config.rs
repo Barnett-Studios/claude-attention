@@ -58,7 +58,25 @@ pub fn expand_home(raw: &str, home: &Path) -> PathBuf {
 /// → File (with `~` expanded, and a relative path resolved against `config_dir`, so the result is
 /// always absolute), otherwise Name. Any other JSON type → Default.
 pub fn parse_sound(value: &Value, home: &Path, config_dir: &Path) -> Sound {
-    unimplemented!("delegated: parse-sound")
+    match value {
+        Value::Bool(false) => Sound::Off,
+        Value::Bool(true) => Sound::Default,
+        Value::String(s) => {
+            if s.is_empty() {
+                Sound::Default
+            } else if s.starts_with('~') || s.contains('/') {
+                let expanded = if s.starts_with('~') {
+                    expand_home(s, home)
+                } else {
+                    config_dir.join(s)
+                };
+                Sound::File(expanded)
+            } else {
+                Sound::Name(s.clone())
+            }
+        }
+        _ => Sound::Default,
+    }
 }
 
 /// `false` → None; `true`, `"claude"` or `""` → Default; any other string → File, with `~` expanded
