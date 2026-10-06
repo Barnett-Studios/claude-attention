@@ -1,0 +1,6 @@
+#!/bin/sh
+# Example: get a popup when a long `git pull` / merge finishes. Copy to .git/hooks/post-merge.
+# ntfyer is fail-open: if it is missing or anything goes wrong, the hook still succeeds.
+command -v ntfyer >/dev/null 2>&1 || exit 0
+ntfyer signal --event merge --message "Merge finished in $(basename "$(git rev-parse --show-toplevel)")"
+exit 0

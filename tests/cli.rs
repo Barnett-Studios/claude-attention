@@ -1,6 +1,6 @@
 //! `ntfyer signal` behaviour through the real binary, in dry-run mode (NTFYER_DRY_RUN=1 prints the
 //! channels it would fire: `bell`, `sound:<file>`, `popup:<title>|<message>`). Ported from the
-//! claude-attention shell suite.
+//! original shell suite.
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
