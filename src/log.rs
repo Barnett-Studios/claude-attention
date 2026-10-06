@@ -4,7 +4,9 @@ use std::path::Path;
 
 pub const KEEP_LINES: usize = 200;
 
-/// Replaces every `\n` and `\r` with a space, so one field can never forge a second log line.
+/// Replaces every control character (`char::is_control`, which covers `\n`, `\r` and ESC) and
+/// U+2028 / U+2029 with a space, so a field can neither forge a log line nor smuggle terminal
+/// escape sequences into whoever tails the log.
 pub fn sanitize(field: &str) -> String {
     unimplemented!("delegated: log-sanitize")
 }

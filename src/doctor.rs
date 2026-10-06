@@ -22,7 +22,10 @@ pub fn report(ctx: &Context) -> (Value, bool) {
         }
         Some(Os::Linux) => {
             let names = ["notify-send", "gdbus", "pw-play", "paplay", "aplay"];
-            let b: serde_json::Map<String, Value> = names.iter().map(|n| (n.to_string(), json!(popup::which(n)))).collect();
+            let b: serde_json::Map<String, Value> = names
+                .iter()
+                .map(|n| (n.to_string(), json!(popup::which(n))))
+                .collect();
             let healthy = popup::which("notify-send") || popup::which("gdbus");
             (Value::Object(b), healthy)
         }
@@ -53,7 +56,12 @@ pub fn text(body: &Value) -> String {
     let mut walk = |prefix: &str, v: &Value| {
         if let Value::Object(m) = v {
             for (k, v) in m {
-                out.push_str(&format!("{prefix}{k}: {}\n", v.as_str().map(str::to_string).unwrap_or_else(|| v.to_string())));
+                out.push_str(&format!(
+                    "{prefix}{k}: {}\n",
+                    v.as_str()
+                        .map(str::to_string)
+                        .unwrap_or_else(|| v.to_string())
+                ));
             }
         }
     };

@@ -7,7 +7,10 @@ fn v(xs: &[&str]) -> Vec<String> {
 
 #[test]
 fn notify_send_args_with_and_without_icon() {
-    assert_eq!(notify_send_args("T", "B", None), v(&["-a", "ntfyer", "--", "T", "B"]));
+    assert_eq!(
+        notify_send_args("T", "B", None),
+        v(&["-a", "ntfyer", "--", "T", "B"])
+    );
     assert_eq!(
         notify_send_args("T", "-B", Some(Path::new("/i.png"))),
         v(&["-a", "ntfyer", "-i", "/i.png", "--", "T", "-B"])
@@ -17,8 +20,17 @@ fn notify_send_args_with_and_without_icon() {
 #[test]
 fn gdbus_args_shape() {
     let prefix = [
-        "call", "--session", "--dest", "org.freedesktop.Notifications", "--object-path",
-        "/org/freedesktop/Notifications", "--method", "org.freedesktop.Notifications.Notify", "ntfyer", "0",
+        "call",
+        "--session",
+        "--dest",
+        "org.freedesktop.Notifications",
+        "--object-path",
+        "/org/freedesktop/Notifications",
+        "--method",
+        "org.freedesktop.Notifications.Notify",
+        "--",
+        "ntfyer",
+        "0",
     ];
     let mut want = v(&prefix);
     want.extend(v(&["", "T", "B", "[]", "{}", "-1"]));

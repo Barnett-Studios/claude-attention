@@ -3,7 +3,9 @@ use std::path::{Path, PathBuf};
 
 #[test]
 fn parse_envelope_full() {
-    let e = parse(r#"{"message":"m","title":"t","project":"/p/x","event":"stop","session":"s1","quiet":true,"extra":1}"#);
+    let e = parse(
+        r#"{"message":"m","title":"t","project":"/p/x","event":"stop","session":"s1","quiet":true,"extra":1}"#,
+    );
     assert_eq!(
         e,
         Envelope {
@@ -30,9 +32,18 @@ fn parse_envelope_partial_and_bad() {
 
 #[test]
 fn default_message_cases() {
-    assert_eq!(default_message(Some("stop")), "Finished and waiting for you.");
-    assert_eq!(default_message(Some("Stop")), "Finished and waiting for you.");
-    assert_eq!(default_message(Some("notification")), "Needs your attention.");
+    assert_eq!(
+        default_message(Some("stop")),
+        "Finished and waiting for you."
+    );
+    assert_eq!(
+        default_message(Some("Stop")),
+        "Finished and waiting for you."
+    );
+    assert_eq!(
+        default_message(Some("notification")),
+        "Needs your attention."
+    );
     assert_eq!(default_message(None), "Needs your attention.");
 }
 

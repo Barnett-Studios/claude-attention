@@ -64,8 +64,14 @@ fn main() -> ExitCode {
         Ok(c) => c,
         Err(e) => {
             let _ = e.print();
+            // `signal` is fail-open even on bad input: an adapter passing a flag this version does
+            // not know must not break the harness that called it
+            let signalling = std::env::args().nth(1).as_deref() == Some("signal");
             return match e.kind() {
-                clap::error::ErrorKind::DisplayHelp | clap::error::ErrorKind::DisplayVersion => ExitCode::SUCCESS,
+                clap::error::ErrorKind::DisplayHelp | clap::error::ErrorKind::DisplayVersion => {
+                    ExitCode::SUCCESS
+                }
+                _ if signalling => ExitCode::SUCCESS,
                 _ => ExitCode::from(EXIT_USAGE),
             };
         }
@@ -78,7 +84,13 @@ fn main() -> ExitCode {
         };
     };
     match cli.cmd {
-        Cmd::Signal { message, title, project, event, json } => {
+        Cmd::Signal {
+            message,
+            title,
+            project,
+            event,
+            json,
+        } => {
             let mut env = if json {
                 let mut input = String::new();
                 let _ = std::io::stdin().read_to_string(&mut input);
@@ -100,11 +112,20 @@ fn main() -> ExitCode {
                 Format::Json => println!("{}", ntfyer::doctor::envelope(body)),
                 Format::Text => print!("{}", ntfyer::doctor::text(&body)),
             }
-            if healthy { ExitCode::SUCCESS } else { ExitCode::FAILURE }
+            if healthy {
+                ExitCode::SUCCESS
+            } else {
+                ExitCode::FAILURE
+            }
         }
-        Cmd::Config { cmd: ConfigCmd::Path } => {
+        Cmd::Config {
+            cmd: ConfigCmd::Path,
+        } => {
             println!("global: {}", ctx.paths.global_config().display());
-            println!("project: {}", ntfyer::paths::project_config(&ctx.cwd).display());
+            println!(
+                "project: {}",
+                ntfyer::paths::project_config(&ctx.cwd).display()
+            );
             ExitCode::SUCCESS
         }
     }
@@ -115,7 +136,9 @@ fn build(ctx: &Context) -> ExitCode {
         return ExitCode::SUCCESS;
     }
     let cfg = ctx.config_for(&ctx.cwd);
-    match macos_app::ensure(&ctx.build_env(), &cfg.icon, true, &|p| ctx.log_missing_icon(p)) {
+    match macos_app::ensure(&ctx.build_env(), &cfg.icon, true, &|p| {
+        ctx.log_missing_icon(p)
+    }) {
         Ok((_, Built::UpToDate)) => ExitCode::SUCCESS,
         Ok((_, Built::Fresh { compiled })) => {
             println!("{}", if compiled { "compiled" } else { "icon updated" });

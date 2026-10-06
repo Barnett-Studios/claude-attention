@@ -5,9 +5,9 @@
 //! The contract (front doors, envelope, config, exit codes) is in CONTRACT.md.
 
 pub mod config;
+pub mod debounce;
 pub mod doctor;
 pub mod envelope;
-pub mod debounce;
 pub mod lock;
 pub mod log;
 pub mod paths;

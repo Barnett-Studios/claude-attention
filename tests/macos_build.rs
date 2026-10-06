@@ -8,7 +8,8 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 use std::time::{Duration, Instant};
 
-const GENERIC: &str = "/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/GenericApplicationIcon.icns";
+const GENERIC: &str =
+    "/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/GenericApplicationIcon.icns";
 
 struct Env {
     dir: tempfile::TempDir,
@@ -41,6 +42,8 @@ impl Env {
             .env("HOME", &self.home)
             .env("NTFYER_REGISTER", "0")
             .env("NTFYER_DEFAULT_ICON", default_icon)
+            .env("TMPDIR", self.dir.path())
+            .current_dir(self.dir.path())
             .stdin(Stdio::null());
         c
     }
@@ -48,14 +51,20 @@ impl Env {
         self.build_with_icon(&self.dir.path().join("no-default.icns").to_string_lossy())
     }
     fn build_with_icon(&self, default_icon: &str) -> Output {
-        self.cmd(&["build"], None, default_icon).output().expect("run build")
+        self.cmd(&["build"], None, default_icon)
+            .output()
+            .expect("run build")
     }
     fn apps(&self) -> Vec<PathBuf> {
         std::fs::read_dir(self.app_dir())
             .map(|rd| {
                 rd.flatten()
                     .map(|e| e.path())
-                    .filter(|p| p.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.starts_with("Ntfyer-") && n.ends_with(".app")))
+                    .filter(|p| {
+                        p.file_name()
+                            .and_then(|n| n.to_str())
+                            .is_some_and(|n| n.starts_with("Ntfyer-") && n.ends_with(".app"))
+                    })
                     .collect()
             })
             .unwrap_or_default()
@@ -66,7 +75,10 @@ impl Env {
         apps[0].clone()
     }
     fn bundle_id(&self) -> String {
-        plist_value(&self.app().join("Contents/Info.plist"), "CFBundleIdentifier")
+        plist_value(
+            &self.app().join("Contents/Info.plist"),
+            "CFBundleIdentifier",
+        )
     }
     fn icns(&self) -> PathBuf {
         self.app().join("Contents/Resources/AppIcon.icns")
@@ -78,14 +90,25 @@ impl Env {
         if let Some(r) = rotate {
             c.args(["-r", r]);
         }
-        let ok = c.arg(GENERIC).arg("--out").arg(&out).stdout(Stdio::null()).status().expect("sips").success();
+        let ok = c
+            .arg(GENERIC)
+            .arg("--out")
+            .arg(&out)
+            .stdout(Stdio::null())
+            .status()
+            .expect("sips")
+            .success();
         assert!(ok, "sips made {name}");
         out
     }
 }
 
 fn plist_value(plist: &Path, key: &str) -> String {
-    let out = Command::new("/usr/libexec/PlistBuddy").args(["-c", &format!("Print :{key}")]).arg(plist).output().expect("PlistBuddy");
+    let out = Command::new("/usr/libexec/PlistBuddy")
+        .args(["-c", &format!("Print :{key}")])
+        .arg(plist)
+        .output()
+        .expect("PlistBuddy");
     String::from_utf8_lossy(&out.stdout).trim().to_string()
 }
 
@@ -99,7 +122,13 @@ fn stdout(o: &Output) -> String {
 }
 
 fn signed(app: &Path) -> bool {
-    Command::new("codesign").arg("--verify").arg(app).stderr(Stdio::null()).status().map(|s| s.success()).unwrap_or(false)
+    Command::new("codesign")
+        .arg("--verify")
+        .arg(app)
+        .stderr(Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
 }
 
 fn wait_until(limit: Duration, cond: impl Fn() -> bool) -> bool {
@@ -114,89 +143,179 @@ fn wait_until(limit: Duration, cond: impl Fn() -> bool) -> bool {
 }
 
 #[test]
-fn build_lifecycle_and_icons() {
+fn first_build_compiles_a_signed_generic_bundle() {
     let e = Env::new();
     let first = e.build();
-    assert!(first.status.success(), "build ok: {}", String::from_utf8_lossy(&first.stderr));
+    assert!(
+        first.status.success(),
+        "build ok: {}",
+        String::from_utf8_lossy(&first.stderr)
+    );
     assert_eq!(stdout(&first), "compiled");
     let app = e.app();
     assert!(app.join("Contents/MacOS/Ntfyer").is_file(), "executable");
-    assert!(e.bundle_id().starts_with("dev.ntfyer.notifier."), "namespaced id");
+    assert!(
+        e.bundle_id().starts_with("dev.ntfyer.notifier."),
+        "namespaced id"
+    );
     assert!(signed(&app), "signed");
-    assert!(!e.icns().exists(), "no icon when the default icon is absent");
-    let usage = Command::new(app.join("Contents/MacOS/Ntfyer")).output().expect("run notifier");
+    assert!(
+        !e.icns().exists(),
+        "no icon when the default icon is absent"
+    );
+    let usage = Command::new(app.join("Contents/MacOS/Ntfyer"))
+        .output()
+        .expect("run notifier");
     assert_eq!(usage.status.code(), Some(2), "notifier usage error");
-    let generic_id = e.bundle_id();
+    let empty_title = Command::new(app.join("Contents/MacOS/Ntfyer"))
+        .args(["", "m"])
+        .output()
+        .expect("run notifier");
+    assert_eq!(
+        empty_title.status.code(),
+        Some(2),
+        "notifier refuses an empty title"
+    );
+    assert_eq!(stdout(&e.build()), "", "unchanged build does nothing");
+}
 
+#[test]
+fn icon_change_is_a_new_identity_without_recompiling() {
+    let e = Env::new();
+    e.build();
+    let generic_id = e.bundle_id();
     let a = e.png("a.png", None);
     e.config(&format!(r#"{{"icon":"{}"}}"#, a.display()));
-    let out = e.build();
-    assert_eq!(stdout(&out), "icon updated", "icon change does not recompile");
-    assert!(std::fs::read(e.icns()).expect("icns").starts_with(b"icns"), "png converted to icns");
+    assert_eq!(
+        stdout(&e.build()),
+        "icon updated",
+        "icon change does not recompile"
+    );
+    assert!(
+        std::fs::read(e.icns()).expect("icns").starts_with(b"icns"),
+        "png converted to icns"
+    );
     assert_ne!(e.bundle_id(), generic_id, "new identity per icon");
     assert!(signed(&e.app()), "new bundle signed");
     let (first_sum, first_id) = (sha(&e.icns()), e.bundle_id());
-
     assert_eq!(stdout(&e.build()), "", "unchanged build does nothing");
-    assert_eq!(sha(&e.icns()), first_sum);
 
     let b = e.png("b.png", Some("90"));
     e.config(&format!(r#"{{"icon":"{}"}}"#, b.display()));
     e.build();
     assert_ne!(sha(&e.icns()), first_sum, "different icon replaces the old");
-    assert_ne!(e.bundle_id(), first_id, "different icon, different identity");
+    assert_ne!(
+        e.bundle_id(),
+        first_id,
+        "different icon, different identity"
+    );
 
     e.config(&format!(r#"{{"icon":"{}"}}"#, a.display()));
     e.build();
-    assert_eq!(e.bundle_id(), first_id, "returning to an icon returns to its identity");
+    assert_eq!(
+        e.bundle_id(),
+        first_id,
+        "returning to an icon returns to its identity"
+    );
+}
 
+#[test]
+fn icon_values_icns_claude_false() {
+    let e = Env::new();
+    e.build();
+    let generic_id = e.bundle_id();
     e.config(&format!(r#"{{"icon":"{GENERIC}"}}"#));
     e.build();
     assert_eq!(sha(&e.icns()), sha(Path::new(GENERIC)), "icns used as-is");
 
     e.config(r#"{"icon":"claude"}"#);
     e.build_with_icon(GENERIC);
-    assert_eq!(sha(&e.icns()), sha(Path::new(GENERIC)), "\"claude\" uses the default icon");
+    assert_eq!(
+        sha(&e.icns()),
+        sha(Path::new(GENERIC)),
+        "\"claude\" uses the default icon"
+    );
 
     e.config(r#"{"icon":false}"#);
     e.build_with_icon(GENERIC);
-    assert!(!e.icns().exists() && e.bundle_id() == generic_id, "icon false → generic");
-
-    let missing = e.dir.path().join("missing.png");
-    e.config(&format!(r#"{{"icon":"{}"}}"#, missing.display()));
-    e.build();
-    assert!(!e.icns().exists() && e.bundle_id() == generic_id, "missing icon → generic");
-    let log = std::fs::read_to_string(e.home.join(".local/state/ntfyer/log")).unwrap_or_default();
-    assert!(log.contains(&format!("icon not found: {}", missing.display())), "missing icon logged: {log}");
-
-    std::fs::copy(&a, e.home.join(".config/ntfyer/rel.png")).expect("copy");
-    e.config(r#"{"icon":"rel.png"}"#);
-    let out = e.cmd(&["build"], None, "/none").current_dir(e.dir.path()).output().expect("build");
-    assert!(out.status.success());
-    let rel_id = e.bundle_id();
-    assert!(e.icns().exists(), "relative icon resolves against the config dir");
-    e.cmd(&["build"], None, "/none").current_dir("/").output().expect("build");
-    assert_eq!(e.bundle_id(), rel_id, "same from any working directory");
-
-    std::fs::remove_dir_all(e.app()).expect("rm app");
-    e.cmd(&["build"], None, "/none").output().expect("build");
-    assert!(signed(&e.app()) && e.app().join("Contents/Info.plist").is_file(), "deleted bundle rebuilt whole");
+    assert!(
+        !e.icns().exists() && e.bundle_id() == generic_id,
+        "icon false → generic"
+    );
 }
 
 #[test]
-fn build_lock_dead_and_live_owners() {
+fn missing_icon_falls_back_and_is_logged() {
+    let e = Env::new();
+    e.build();
+    let generic_id = e.bundle_id();
+    let missing = e.dir.path().join("missing.png");
+    e.config(&format!(r#"{{"icon":"{}"}}"#, missing.display()));
+    e.build();
+    assert!(
+        !e.icns().exists() && e.bundle_id() == generic_id,
+        "missing icon → generic"
+    );
+    let log = std::fs::read_to_string(e.home.join(".local/state/ntfyer/log")).unwrap_or_default();
+    assert!(
+        log.contains(&format!("icon not found: {}", missing.display())),
+        "missing icon logged: {log}"
+    );
+}
+
+#[test]
+fn relative_icon_resolves_against_config_dir_from_any_cwd() {
+    let e = Env::new();
+    std::fs::copy(e.png("a.png", None), e.home.join(".config/ntfyer/rel.png")).expect("copy");
+    e.config(r#"{"icon":"rel.png"}"#);
+    let out = e
+        .cmd(&["build"], None, "/none")
+        .current_dir(e.dir.path())
+        .output()
+        .expect("build");
+    assert!(out.status.success());
+    let rel_id = e.bundle_id();
+    assert!(
+        e.icns().exists(),
+        "relative icon resolves against the config dir"
+    );
+    e.cmd(&["build"], None, "/none")
+        .current_dir("/")
+        .output()
+        .expect("build");
+    assert_eq!(e.bundle_id(), rel_id, "same from any working directory");
+}
+
+#[test]
+fn deleted_bundle_is_rebuilt_whole() {
+    let e = Env::new();
+    e.build();
+    std::fs::remove_dir_all(e.app()).expect("rm app");
+    e.build();
+    assert!(
+        signed(&e.app()) && e.app().join("Contents/Info.plist").is_file(),
+        "deleted bundle rebuilt whole"
+    );
+}
+
+#[test]
+fn build_lock_leftover_file_and_live_holder() {
     let e = Env::new();
     let lock = e.app_dir().join(".build.lock");
-    std::fs::create_dir_all(&lock).expect("lock");
-    std::fs::write(lock.join("pid"), "999999").expect("pid");
-    assert!(e.build().status.success(), "dead owner's lock taken over");
-    assert!(!lock.exists(), "lock released");
+    std::fs::create_dir_all(e.app_dir()).expect("app dir");
+    std::fs::write(&lock, "999999").expect("leftover");
+    assert!(
+        e.build().status.success(),
+        "a lock file nobody holds does not block"
+    );
 
     std::fs::remove_dir_all(e.app()).expect("rm app");
-    std::fs::create_dir_all(&lock).expect("lock");
-    std::fs::write(lock.join("pid"), std::process::id().to_string()).expect("pid");
-    assert!(!e.build().status.success(), "live owner respected");
-    std::fs::remove_dir_all(&lock).expect("unlock");
+    let held = ntfyer::lock::acquire(&lock).expect("hold the lock");
+    let out = e.build();
+    assert_eq!(out.status.code(), Some(1), "live holder respected");
+    assert!(String::from_utf8_lossy(&out.stderr).contains("another build is running"));
+    drop(held);
+    assert!(e.build().status.success(), "builds once released");
 }
 
 fn fake_bin(dir: &Path, name: &str, script: &str) {
@@ -213,7 +332,11 @@ fn signal_never_compiles_inside_the_hook() {
     e.config(r#"{"bell":false,"sound":false}"#);
     let fake = e.dir.path().join("fakebin");
     let marker = e.dir.path().join("swiftc-ran");
-    fake_bin(&fake, "swiftc", &format!("#!/bin/sh\ntouch '{}'\nsleep 4\nexit 1\n", marker.display()));
+    fake_bin(
+        &fake,
+        "swiftc",
+        &format!("#!/bin/sh\ntouch '{}'\nsleep 4\nexit 1\n", marker.display()),
+    );
     let start = Instant::now();
     let out = e
         .cmd(&["signal", "--message", "m"], Some(&fake), "/none")
@@ -221,9 +344,22 @@ fn signal_never_compiles_inside_the_hook() {
         .output()
         .expect("signal");
     assert_eq!(out.status.code(), Some(0), "signal always exits 0");
-    assert!(start.elapsed() < Duration::from_secs(3), "returned in {:?}", start.elapsed());
-    assert!(wait_until(Duration::from_secs(3), || marker.exists()), "compile started in the background");
-    assert!(wait_until(Duration::from_secs(10), || !e.app_dir().join(".build.lock").exists()), "background build finished");
+    assert!(
+        start.elapsed() < Duration::from_millis(3500),
+        "returned in {:?} (the fake compile takes 4s)",
+        start.elapsed()
+    );
+    assert!(
+        wait_until(Duration::from_secs(3), || marker.exists()),
+        "compile started in the background"
+    );
+    assert!(
+        wait_until(Duration::from_secs(10), || ntfyer::lock::acquire(
+            &e.app_dir().join(".build.lock")
+        )
+        .is_some()),
+        "background build finished"
+    );
 }
 
 #[test]
@@ -232,8 +368,15 @@ fn build_without_command_line_tools_never_runs_the_shim() {
     let fake = e.dir.path().join("fakebin");
     let marker = e.dir.path().join("swiftc-ran");
     fake_bin(&fake, "xcode-select", "#!/bin/sh\nexit 2\n");
-    fake_bin(&fake, "swiftc", &format!("#!/bin/sh\ntouch '{}'\nexit 1\n", marker.display()));
-    let out = e.cmd(&["build"], Some(&fake), "/none").output().expect("build");
+    fake_bin(
+        &fake,
+        "swiftc",
+        &format!("#!/bin/sh\ntouch '{}'\nexit 1\n", marker.display()),
+    );
+    let out = e
+        .cmd(&["build"], Some(&fake), "/none")
+        .output()
+        .expect("build");
     assert_eq!(out.status.code(), Some(1), "build fails");
     assert!(String::from_utf8_lossy(&out.stderr).contains("xcode-select --install"));
     assert!(!marker.exists(), "swiftc shim never invoked");

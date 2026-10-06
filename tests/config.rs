@@ -1,4 +1,6 @@
-use ntfyer::config::{expand_home, parse_icon, parse_sound, read_layer, resolve, Config, Icon, Sound};
+use ntfyer::config::{
+    expand_home, parse_icon, parse_sound, read_layer, resolve, Config, Icon, Sound,
+};
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
 
@@ -7,6 +9,10 @@ const CFG: &str = "/h/.config/ntfyer";
 
 fn h() -> &'static Path {
     Path::new(HOME)
+}
+
+fn c() -> &'static Path {
+    Path::new(CFG)
 }
 
 #[test]
@@ -20,15 +26,32 @@ fn expand_home_cases() {
 
 #[test]
 fn parse_sound_cases() {
-    assert_eq!(parse_sound(&json!(false), h()), Sound::Off);
-    assert_eq!(parse_sound(&json!(true), h()), Sound::Default);
-    assert_eq!(parse_sound(&json!(""), h()), Sound::Default);
-    assert_eq!(parse_sound(&json!("Pop"), h()), Sound::Name("Pop".into()));
-    assert_eq!(parse_sound(&json!("/x/y.wav"), h()), Sound::File("/x/y.wav".into()));
-    assert_eq!(parse_sound(&json!("~/c.wav"), h()), Sound::File("/h/c.wav".into()));
-    assert_eq!(parse_sound(&json!("dir/c.wav"), h()), Sound::File("dir/c.wav".into()));
-    assert_eq!(parse_sound(&json!(3), h()), Sound::Default);
-    assert_eq!(parse_sound(&Value::Null, h()), Sound::Default);
+    assert_eq!(parse_sound(&json!(false), h(), c()), Sound::Off);
+    assert_eq!(parse_sound(&json!(true), h(), c()), Sound::Default);
+    assert_eq!(parse_sound(&json!(""), h(), c()), Sound::Default);
+    assert_eq!(
+        parse_sound(&json!("Pop"), h(), c()),
+        Sound::Name("Pop".into())
+    );
+    assert_eq!(
+        parse_sound(&json!("/x/y.wav"), h(), c()),
+        Sound::File("/x/y.wav".into())
+    );
+    assert_eq!(
+        parse_sound(&json!("~/c.wav"), h(), c()),
+        Sound::File("/h/c.wav".into())
+    );
+    assert_eq!(
+        parse_sound(&json!("dir/c.wav"), h(), c()),
+        Sound::File("/h/.config/ntfyer/dir/c.wav".into())
+    );
+    assert_eq!(
+        parse_sound(&json!("-x/y"), h(), c()),
+        Sound::File("/h/.config/ntfyer/-x/y".into()),
+        "never an option"
+    );
+    assert_eq!(parse_sound(&json!(3), h(), c()), Sound::Default);
+    assert_eq!(parse_sound(&Value::Null, h(), c()), Sound::Default);
 }
 
 #[test]
@@ -38,9 +61,18 @@ fn parse_icon_cases() {
     assert_eq!(parse_icon(&json!(true), h(), c), Icon::Default);
     assert_eq!(parse_icon(&json!("claude"), h(), c), Icon::Default);
     assert_eq!(parse_icon(&json!(""), h(), c), Icon::Default);
-    assert_eq!(parse_icon(&json!("/i/a.png"), h(), c), Icon::File("/i/a.png".into()));
-    assert_eq!(parse_icon(&json!("~/a.png"), h(), c), Icon::File("/h/a.png".into()));
-    assert_eq!(parse_icon(&json!("rel.png"), h(), c), Icon::File("/h/.config/ntfyer/rel.png".into()));
+    assert_eq!(
+        parse_icon(&json!("/i/a.png"), h(), c),
+        Icon::File("/i/a.png".into())
+    );
+    assert_eq!(
+        parse_icon(&json!("~/a.png"), h(), c),
+        Icon::File("/h/a.png".into())
+    );
+    assert_eq!(
+        parse_icon(&json!("rel.png"), h(), c),
+        Icon::File("/h/.config/ntfyer/rel.png".into())
+    );
     assert_eq!(parse_icon(&json!(7), h(), c), Icon::Default);
 }
 
@@ -85,7 +117,10 @@ fn resolve_null_does_not_override() {
 
 #[test]
 fn resolve_per_channel_switches() {
-    let c = res(json!({"bell": false}), json!({"popup": false, "sound": false}));
+    let c = res(
+        json!({"bell": false}),
+        json!({"popup": false, "sound": false}),
+    );
     assert!(!c.bell && !c.popup && c.enabled);
     assert_eq!(c.sound, Sound::Off);
 }
@@ -94,6 +129,30 @@ fn resolve_per_channel_switches() {
 fn resolve_non_bool_flag_is_true() {
     let c = res(json!({"bell": "no"}), Value::Null);
     assert!(c.bell, "only JSON false disables");
+}
+
+#[test]
+fn resolve_project_may_not_name_a_sound_file() {
+    let c = res(json!({"sound": "Pop"}), json!({"sound": "/tmp/evil.wav"}));
+    assert_eq!(
+        c.sound,
+        Sound::Name("Pop".into()),
+        "project file path ignored"
+    );
+    let c = res(json!({"sound": "/g/ok.wav"}), json!({"sound": "Hero"}));
+    assert_eq!(
+        c.sound,
+        Sound::Name("Hero".into()),
+        "project may pick a system sound"
+    );
+    let c = res(json!({"sound": "/g/ok.wav"}), json!({"sound": false}));
+    assert_eq!(c.sound, Sound::Off, "project may silence");
+    let c = res(json!({"sound": "/g/ok.wav"}), Value::Null);
+    assert_eq!(
+        c.sound,
+        Sound::File("/g/ok.wav".into()),
+        "global may name a file"
+    );
 }
 
 #[test]

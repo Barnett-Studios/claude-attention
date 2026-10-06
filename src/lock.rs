@@ -1,38 +1,29 @@
-//! A directory lock owned by a pid. A lock whose owner is gone (killed by a hook timeout, a crash,
-//! a reboot) is taken over instead of blocking every later build.
+//! The build lock: an exclusive `flock` on a lock file. The kernel drops it when the holder exits —
+//! even when it is killed by a hook timeout — so a lock can never be left stale.
 
-use std::path::{Path, PathBuf};
+use std::fs::{File, OpenOptions};
+use std::path::Path;
 
 #[derive(Debug)]
 pub struct LockGuard {
-    dir: PathBuf,
+    _file: File,
 }
 
-impl LockGuard {
-    pub fn path(&self) -> &Path {
-        &self.dir
-    }
-}
-
-impl Drop for LockGuard {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.dir);
-    }
-}
-
-/// Creates the parent directories, then `mkdir dir`: on success writes `pid` to `dir/pid` and
-/// returns the guard. When `dir` already exists: if `dir/pid` holds a number for which `alive` is
-/// true → None; otherwise removes `dir` and retries `mkdir` once (None if that fails too).
-pub fn acquire(dir: &Path, pid: u32, alive: &dyn Fn(u32) -> bool) -> Option<LockGuard> {
+/// Creates the parent directories and the lock file if needed, then takes an exclusive,
+/// non-blocking lock on it (`File::try_lock`). Returns None when another holder has it or the file
+/// cannot be opened. The lock is released when the guard is dropped; the file itself stays.
+pub fn acquire(path: &Path) -> Option<LockGuard> {
     unimplemented!("delegated: lock-acquire")
 }
 
-/// Whether a process with this pid exists (`kill -0`).
-pub fn pid_alive(pid: u32) -> bool {
-    std::process::Command::new("kill")
-        .args(["-0", &pid.to_string()])
-        .stderr(std::process::Stdio::null())
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false)
+/// Opens the lock file for locking (shared by `acquire` and callers that only want to probe it).
+pub fn open(path: &Path) -> std::io::Result<File> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .write(true)
+        .open(path)
 }

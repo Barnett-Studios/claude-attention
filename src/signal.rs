@@ -48,12 +48,18 @@ impl Context {
             off: var("NTFYER").is_some_and(|v| v == "off"),
             no_fallback: var("NTFYER_NO_FALLBACK").is_some_and(|v| v != "0"),
             register: var("NTFYER_REGISTER").is_none_or(|v| v != "0"),
-            default_icon: var("NTFYER_DEFAULT_ICON").map(PathBuf::from).unwrap_or_else(|| PathBuf::from(CLAUDE_ICON)),
+            default_icon: var("NTFYER_DEFAULT_ICON")
+                .map(PathBuf::from)
+                .unwrap_or_else(|| PathBuf::from(CLAUDE_ICON)),
         })
     }
 
     pub fn build_env(&self) -> macos_app::BuildEnv<'_> {
-        macos_app::BuildEnv { app_dir: &self.paths.app_dir, default_icon: &self.default_icon, register: self.register }
+        macos_app::BuildEnv {
+            app_dir: &self.paths.app_dir,
+            default_icon: &self.default_icon,
+            register: self.register,
+        }
     }
 
     /// The effective config for `project`.
@@ -70,7 +76,11 @@ impl Context {
     pub fn log_missing_icon(&self, icon: &Path) {
         log::append(
             &self.paths.log_file(),
-            &format!("{} notifier: icon not found: {} (using the generic icon)", timestamp(self.now), log::sanitize(&icon.to_string_lossy())),
+            &format!(
+                "{} notifier: icon not found: {} (using the generic icon)",
+                timestamp(self.now),
+                log::sanitize(&icon.to_string_lossy())
+            ),
         );
     }
 }
@@ -88,7 +98,11 @@ pub fn run(env: &Envelope, ctx: &Context, out: &mut dyn Write) -> String {
         "skip:quiet"
     } else if !cfg.enabled {
         "skip:disabled"
-    } else if !debounce::admit(&debounce::stamp_path(&ctx.paths.state_dir, &project), ctx.now, debounce::WINDOW_SECS) {
+    } else if !debounce::admit(
+        &debounce::stamp_path(&ctx.paths.state_dir, &project),
+        ctx.now,
+        debounce::WINDOW_SECS,
+    ) {
         "skip:debounce"
     } else {
         "signal"
@@ -107,7 +121,10 @@ pub fn run(env: &Envelope, ctx: &Context, out: &mut dyn Write) -> String {
         return verdict.to_string();
     }
 
-    let message = env.message.clone().unwrap_or_else(|| envelope::default_message(env.event.as_deref()).to_string());
+    let message = env
+        .message
+        .clone()
+        .unwrap_or_else(|| envelope::default_message(env.event.as_deref()).to_string());
     let title = env.title.clone().unwrap_or_else(|| label.clone());
 
     if cfg.bell {
@@ -122,7 +139,11 @@ pub fn run(env: &Envelope, ctx: &Context, out: &mut dyn Write) -> String {
             if ctx.dry_run {
                 let _ = writeln!(out, "sound:{}", file.display());
             } else if let Some(cmd) = sound::player(os, &file, &popup::which) {
-                let _ = Command::new(&cmd[0]).args(&cmd[1..]).stdout(Stdio::null()).stderr(Stdio::null()).spawn();
+                let _ = Command::new(&cmd[0])
+                    .args(&cmd[1..])
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .spawn();
             }
         }
     }
@@ -151,7 +172,10 @@ fn ring_bell() {
 fn show_popup(ctx: &Context, cfg: &Config, title: &str, message: &str, group: &str) {
     match ctx.os {
         Some(Os::MacOs) => {
-            let posted = macos_app::notify(&ctx.build_env(), &cfg.icon, title, message, group, &|p| ctx.log_missing_icon(p));
+            let posted =
+                macos_app::notify(&ctx.build_env(), &cfg.icon, title, message, group, &|p| {
+                    ctx.log_missing_icon(p)
+                });
             if !posted && !ctx.no_fallback {
                 let _ = Command::new("osascript")
                     .args(macos::osascript_args(title, message))
@@ -189,7 +213,12 @@ pub fn timestamp(secs: u64) -> String {
     let day = doy - (153 * mp + 2) / 5 + 1;
     let month = if mp < 10 { mp + 3 } else { mp - 9 };
     let year = yoe + era * 400 + i64::from(month <= 2);
-    format!("{year:04}-{month:02}-{day:02}T{:02}:{:02}:{:02}Z", rem / 3600, rem % 3600 / 60, rem % 60)
+    format!(
+        "{year:04}-{month:02}-{day:02}T{:02}:{:02}:{:02}Z",
+        rem / 3600,
+        rem % 3600 / 60,
+        rem % 60
+    )
 }
 
 #[cfg(test)]

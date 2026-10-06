@@ -28,8 +28,9 @@ pub fn identity(digest: &str) -> Identity {
     unimplemented!("delegated: bundle-identity")
 }
 
-/// Lowercase hex sha256 over `SWIFT_SOURCE` followed by the crate version — a changed notifier
-/// source or a new ntfyer release rebuilds the binary.
+/// Lowercase hex sha256 over the bytes of `SWIFT_SOURCE` immediately followed (no separator) by the
+/// bytes of the crate version — a changed notifier source or a new ntfyer release rebuilds the
+/// binary.
 pub fn source_digest() -> String {
     unimplemented!("delegated: source-digest")
 }
@@ -45,7 +46,11 @@ pub fn info_plist(bundle_id: &str, with_icon: bool) -> String {
 
 /// The icon file to bake in: Default → `default_icon` when `exists`; None → None; File(p) → p
 /// when `exists`, else None.
-pub fn icon_source(icon: &Icon, default_icon: &Path, exists: &dyn Fn(&Path) -> bool) -> Option<PathBuf> {
+pub fn icon_source(
+    icon: &Icon,
+    default_icon: &Path,
+    exists: &dyn Fn(&Path) -> bool,
+) -> Option<PathBuf> {
     unimplemented!("delegated: icon-source")
 }
 

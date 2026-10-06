@@ -24,7 +24,9 @@ pub struct BuildEnv<'a> {
 pub enum Built {
     UpToDate,
     /// a bundle was (re)assembled; `compiled` says whether the Swift binary was rebuilt too
-    Fresh { compiled: bool },
+    Fresh {
+        compiled: bool,
+    },
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -39,9 +41,14 @@ pub enum BuildError {
 impl std::fmt::Display for BuildError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            BuildError::NeedsCompile => write!(f, "the notifier needs compiling (run: ntfyer build)"),
+            BuildError::NeedsCompile => {
+                write!(f, "the notifier needs compiling (run: ntfyer build)")
+            }
             BuildError::Locked => write!(f, "another build is running"),
-            BuildError::Toolchain => write!(f, "Xcode Command Line Tools not installed (run: xcode-select --install)"),
+            BuildError::Toolchain => write!(
+                f,
+                "Xcode Command Line Tools not installed (run: xcode-select --install)"
+            ),
             BuildError::Failed(why) => write!(f, "build failed: {why}"),
         }
     }
@@ -69,8 +76,14 @@ pub fn ensure(
     let stamp = cache.join("src-digest");
     let want_src = source_digest();
 
-    let fresh_bin = !(bin.is_file() && fs::read_to_string(&stamp).is_ok_and(|s| s.trim() == want_src));
-    let fresh_app = !(app.join("Contents/MacOS/Ntfyer").is_file() && app.join("Contents/Info.plist").is_file());
+    let freshness = || {
+        let bin_stale =
+            !(bin.is_file() && fs::read_to_string(&stamp).is_ok_and(|s| s.trim() == want_src));
+        let app_stale = !(app.join("Contents/MacOS/Ntfyer").is_file()
+            && app.join("Contents/Info.plist").is_file());
+        (bin_stale, app_stale)
+    };
+    let (fresh_bin, fresh_app) = freshness();
     if !fresh_bin && !fresh_app {
         return Ok((app, Built::UpToDate));
     }
@@ -78,8 +91,13 @@ pub fn ensure(
         return Err(BuildError::NeedsCompile);
     }
 
-    let _lock = lock::acquire(&env.app_dir.join(".build.lock"), std::process::id(), &lock::pid_alive)
-        .ok_or(BuildError::Locked)?;
+    let _lock = lock::acquire(&env.app_dir.join(".build.lock")).ok_or(BuildError::Locked)?;
+    // another build may have finished while we were deciding: never rebuild (and swap out) a
+    // bundle that a concurrent notify could be running
+    let (fresh_bin, fresh_app) = freshness();
+    if !fresh_bin && !fresh_app {
+        return Ok((app, Built::UpToDate));
+    }
     let scratch = Scratch::new(env.app_dir.join(format!(".tmp-{}", std::process::id())))?;
 
     if fresh_bin {
@@ -89,7 +107,14 @@ pub fn ensure(
         let src = scratch.0.join("Ntfyer.swift");
         fs::write(&src, SWIFT_SOURCE).map_err(fail("write swift source"))?;
         let out = scratch.0.join("Ntfyer");
-        run(Command::new("swiftc").arg("-O").arg(&src).arg("-o").arg(&out), "swiftc")?;
+        run(
+            Command::new("swiftc")
+                .arg("-O")
+                .arg(&src)
+                .arg("-o")
+                .arg(&out),
+            "swiftc",
+        )?;
         fs::create_dir_all(&cache).map_err(fail("create build cache"))?;
         fs::rename(&out, &bin).map_err(fail("install binary"))?;
         fs::write(&stamp, &want_src).map_err(fail("write source stamp"))?;
@@ -102,18 +127,32 @@ pub fn ensure(
     fs::copy(&bin, stage.join("Contents/MacOS/Ntfyer")).map_err(fail("copy binary"))?;
     if let Some(f) = &icon_file {
         let dest = stage.join("Contents/Resources/AppIcon.icns");
-        if f.extension().is_some_and(|e| e.eq_ignore_ascii_case("icns")) {
+        if f.extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("icns"))
+        {
             fs::copy(f, &dest).map_err(fail("copy icon"))?;
         } else {
             run(
-                Command::new("sips").args(["-z", "1024", "1024", "-s", "format", "icns"]).arg(f).arg("--out").arg(&dest),
+                Command::new("sips")
+                    .args(["-z", "1024", "1024", "-s", "format", "icns"])
+                    .arg(f)
+                    .arg("--out")
+                    .arg(&dest),
                 "sips icon conversion",
             )?;
         }
     }
-    fs::write(stage.join("Contents/Info.plist"), info_plist(&id.bundle_id, icon_file.is_some()))
-        .map_err(fail("write Info.plist"))?;
-    run(Command::new("codesign").args(["--force", "-s", "-"]).arg(&stage), "codesign")?;
+    fs::write(
+        stage.join("Contents/Info.plist"),
+        info_plist(&id.bundle_id, icon_file.is_some()),
+    )
+    .map_err(fail("write Info.plist"))?;
+    run(
+        Command::new("codesign")
+            .args(["--force", "-s", "-"])
+            .arg(&stage),
+        "codesign",
+    )?;
     if app.exists() {
         fs::remove_dir_all(&app).map_err(fail("remove old bundle"))?;
     }
@@ -122,24 +161,48 @@ pub fn ensure(
     // retire every other icon's bundle, so only the current one is registered and listed
     if let Ok(entries) = fs::read_dir(env.app_dir) {
         for old in entries.flatten().map(|e| e.path()) {
-            let name = old.file_name().and_then(|n| n.to_str()).unwrap_or_default().to_string();
+            let name = old
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or_default()
+                .to_string();
             if old != app && name.starts_with("Ntfyer-") && name.ends_with(".app") {
                 if env.register {
-                    let _ = Command::new(LSREGISTER).arg("-u").arg(&old).stderr(Stdio::null()).status();
+                    let _ = Command::new(LSREGISTER)
+                        .arg("-u")
+                        .arg(&old)
+                        .stderr(Stdio::null())
+                        .status();
                 }
                 let _ = fs::remove_dir_all(&old);
             }
         }
     }
     if env.register {
-        let _ = Command::new(LSREGISTER).arg("-f").arg(&app).stderr(Stdio::null()).status();
+        let _ = Command::new(LSREGISTER)
+            .arg("-f")
+            .arg(&app)
+            .stderr(Stdio::null())
+            .status();
     }
-    Ok((app, Built::Fresh { compiled: fresh_bin }))
+    Ok((
+        app,
+        Built::Fresh {
+            compiled: fresh_bin,
+        },
+    ))
 }
 
 /// Posts through the bundle. Never compiles: a missing or stale binary starts a detached
 /// `ntfyer build` and returns false so the caller falls back. Returns whether the popup posted.
-pub fn notify(env: &BuildEnv, icon: &Icon, title: &str, body: &str, group: &str, on_missing_icon: &dyn Fn(&Path)) -> bool {
+pub fn notify(
+    env: &BuildEnv,
+    icon: &Icon,
+    title: &str,
+    body: &str,
+    group: &str,
+    on_missing_icon: &dyn Fn(&Path),
+) -> bool {
     match ensure(env, icon, false, on_missing_icon) {
         Ok((app, _)) => {
             let status = Command::new(app.join("Contents/MacOS/Ntfyer"))
@@ -201,7 +264,10 @@ pub fn have_toolchain() -> bool {
 fn run(cmd: &mut Command, what: &str) -> Result<(), BuildError> {
     match cmd.stdout(Stdio::null()).stderr(Stdio::piped()).output() {
         Ok(o) if o.status.success() => Ok(()),
-        Ok(o) => Err(BuildError::Failed(format!("{what}: {}", String::from_utf8_lossy(&o.stderr).trim()))),
+        Ok(o) => Err(BuildError::Failed(format!(
+            "{what}: {}",
+            String::from_utf8_lossy(&o.stderr).trim()
+        ))),
         Err(e) => Err(BuildError::Failed(format!("{what}: {e}"))),
     }
 }

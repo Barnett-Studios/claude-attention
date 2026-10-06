@@ -1,16 +1,24 @@
 use ntfyer::config::Icon;
-use ntfyer::popup::macos::{icon_digest, icon_source, identity, info_plist, osascript_args, source_digest, SWIFT_SOURCE};
+use ntfyer::popup::macos::{
+    icon_digest, icon_source, identity, info_plist, osascript_args, source_digest, SWIFT_SOURCE,
+};
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 
 fn hex(bytes: &[u8]) -> String {
-    Sha256::digest(bytes).iter().map(|b| format!("{b:02x}")).collect()
+    Sha256::digest(bytes)
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
 }
 
 #[test]
 fn icon_digest_cases() {
     assert_eq!(icon_digest(None), "none");
-    assert_eq!(icon_digest(Some(Path::new("/definitely/missing.png"))), "none");
+    assert_eq!(
+        icon_digest(Some(Path::new("/definitely/missing.png"))),
+        "none"
+    );
     let d = tempfile::tempdir().expect("tempdir");
     let f = d.path().join("i.png");
     std::fs::write(&f, b"icon-bytes").expect("write");
@@ -44,7 +52,10 @@ fn info_plist_contents() {
         "<key>CFBundleDisplayName</key><string>ntfyer</string>",
         "<key>CFBundleExecutable</key><string>Ntfyer</string>",
         "<key>CFBundlePackageType</key><string>APPL</string>",
-        &format!("<key>CFBundleShortVersionString</key><string>{}</string>", env!("CARGO_PKG_VERSION")),
+        &format!(
+            "<key>CFBundleShortVersionString</key><string>{}</string>",
+            env!("CARGO_PKG_VERSION")
+        ),
         "<key>CFBundleVersion</key><string>1</string>",
         "<key>LSUIElement</key><true/>",
         "<key>CFBundleIconFile</key><string>AppIcon</string>",
@@ -59,21 +70,36 @@ fn info_plist_contents() {
 #[test]
 fn icon_source_cases() {
     let def = Path::new("/Applications/Claude.app/icon.icns");
-    assert_eq!(icon_source(&Icon::Default, def, &|_| true), Some(def.to_path_buf()));
+    assert_eq!(
+        icon_source(&Icon::Default, def, &|_| true),
+        Some(def.to_path_buf())
+    );
     assert_eq!(icon_source(&Icon::Default, def, &|_| false), None);
     assert_eq!(icon_source(&Icon::None, def, &|_| true), None);
-    assert_eq!(icon_source(&Icon::File("/i.png".into()), def, &|_| true), Some(PathBuf::from("/i.png")));
-    assert_eq!(icon_source(&Icon::File("/i.png".into()), def, &|_| false), None);
+    assert_eq!(
+        icon_source(&Icon::File("/i.png".into()), def, &|_| true),
+        Some(PathBuf::from("/i.png"))
+    );
+    assert_eq!(
+        icon_source(&Icon::File("/i.png".into()), def, &|_| false),
+        None
+    );
 }
 
 #[test]
 fn osascript_args_escape() {
     assert_eq!(
         osascript_args("T", "B"),
-        vec!["-e".to_string(), r#"display notification "B" with title "T""#.to_string()]
+        vec![
+            "-e".to_string(),
+            r#"display notification "B" with title "T""#.to_string()
+        ]
     );
     assert_eq!(
         osascript_args(r#"a"b"#, r"c\d"),
-        vec!["-e".to_string(), r#"display notification "c\\d" with title "a\"b""#.to_string()]
+        vec![
+            "-e".to_string(),
+            r#"display notification "c\\d" with title "a\"b""#.to_string()
+        ]
     );
 }

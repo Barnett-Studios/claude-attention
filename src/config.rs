@@ -33,7 +33,13 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
-        Config { enabled: true, bell: true, popup: true, sound: Sound::Default, icon: Icon::Default }
+        Config {
+            enabled: true,
+            bell: true,
+            popup: true,
+            sound: Sound::Default,
+            icon: Icon::Default,
+        }
     }
 }
 
@@ -43,8 +49,9 @@ pub fn expand_home(raw: &str, home: &Path) -> PathBuf {
 }
 
 /// `false` → Off; `true` → Default; a string: empty → Default, starting with `~` or containing `/`
-/// → File (with `~` expanded), otherwise Name. Any other JSON type → Default.
-pub fn parse_sound(value: &Value, home: &Path) -> Sound {
+/// → File (with `~` expanded, and a relative path resolved against `config_dir`, so the result is
+/// always absolute), otherwise Name. Any other JSON type → Default.
+pub fn parse_sound(value: &Value, home: &Path, config_dir: &Path) -> Sound {
     unimplemented!("delegated: parse-sound")
 }
 
@@ -64,7 +71,9 @@ pub fn read_layer(path: &Path) -> Value {
 /// Starts from `Config::default()` and applies `global` then `project`, key by key, skipping keys
 /// that are absent or `null` and layers that are not objects. `enabled` / `bell` / `popup` are
 /// false only for JSON `false` (any other non-null value means true). `sound` goes through
-/// `parse_sound`. `icon` is taken from `global` only (one icon per machine), via `parse_icon`.
+/// `parse_sound`; a project layer's sound that parses to `File` is ignored (a cloned repo must not
+/// make the machine play an arbitrary file), so only the global layer may name a sound file.
+/// `icon` is taken from `global` only (one icon per machine), via `parse_icon`.
 pub fn resolve(global: &Value, project: &Value, home: &Path, config_dir: &Path) -> Config {
     unimplemented!("delegated: resolve-config")
 }

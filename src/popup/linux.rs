@@ -13,7 +13,8 @@ pub fn notify_send_args(title: &str, body: &str, icon: Option<&Path>) -> Vec<Str
 
 /// Arguments for `gdbus` calling `org.freedesktop.Notifications.Notify` on the session bus:
 /// `call --session --dest org.freedesktop.Notifications --object-path /org/freedesktop/Notifications
-/// --method org.freedesktop.Notifications.Notify ntfyer 0 <icon or ""> <title> <body> [] {} -1`
+/// --method org.freedesktop.Notifications.Notify -- ntfyer 0 <icon or ""> <title> <body> [] {} -1`
+/// (`--` so a title or body starting with `-` is never read as an option)
 pub fn gdbus_args(title: &str, body: &str, icon: Option<&Path>) -> Vec<String> {
     unimplemented!("delegated: gdbus-args")
 }
@@ -30,5 +31,6 @@ pub fn notify(title: &str, body: &str, icon: Option<&Path>) -> bool {
                 .map(|s| s.success())
                 .unwrap_or(false)
     };
-    run("notify-send", notify_send_args(title, body, icon)) || run("gdbus", gdbus_args(title, body, icon))
+    run("notify-send", notify_send_args(title, body, icon))
+        || run("gdbus", gdbus_args(title, body, icon))
 }
