@@ -19,13 +19,21 @@ pub struct Identity {
 
 /// `"none"` when `file` is None or unreadable, else the lowercase hex sha256 of its contents.
 pub fn icon_digest(file: Option<&Path>) -> String {
-    unimplemented!("delegated: icon-digest")
+    use sha2::{Digest, Sha256};
+    match file.and_then(|f| std::fs::read(f).ok()) {
+        Some(bytes) => hex(&Sha256::digest(bytes)),
+        None => "none".to_string(),
+    }
 }
 
 /// The bundle name and id for an icon digest (see `Identity`). A digest shorter than 12 chars is
 /// used whole.
 pub fn identity(digest: &str) -> Identity {
-    let short = if digest.len() >= 12 { &digest[..12] } else { digest };
+    let short = if digest.len() >= 12 {
+        &digest[..12]
+    } else {
+        digest
+    };
     Identity {
         bundle_name: format!("Ntfyer-{}.app", short),
         bundle_id: format!("{}.{}", ID_PREFIX, short),
@@ -36,7 +44,11 @@ pub fn identity(digest: &str) -> Identity {
 /// bytes of the crate version — a changed notifier source or a new ntfyer release rebuilds the
 /// binary.
 pub fn source_digest() -> String {
-    unimplemented!("delegated: source-digest")
+    use sha2::{Digest, Sha256};
+    let mut h = Sha256::new();
+    h.update(SWIFT_SOURCE.as_bytes());
+    h.update(env!("CARGO_PKG_VERSION").as_bytes());
+    hex(&h.finalize())
 }
 
 /// The bundle's Info.plist: XML plist 1.0 with CFBundleIdentifier = `bundle_id`,
@@ -45,7 +57,27 @@ pub fn source_digest() -> String {
 /// CFBundleVersion = `1`, LSUIElement = true, and CFBundleIconFile = `AppIcon` only when
 /// `with_icon`.
 pub fn info_plist(bundle_id: &str, with_icon: bool) -> String {
-    unimplemented!("delegated: info-plist")
+    let icon = if with_icon {
+        "\n<key>CFBundleIconFile</key><string>AppIcon</string>"
+    } else {
+        ""
+    };
+    format!(
+        r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleIdentifier</key><string>{bundle_id}</string>
+<key>CFBundleName</key><string>ntfyer</string>
+<key>CFBundleDisplayName</key><string>ntfyer</string>
+<key>CFBundleExecutable</key><string>Ntfyer</string>
+<key>CFBundlePackageType</key><string>APPL</string>
+<key>CFBundleShortVersionString</key><string>{version}</string>
+<key>CFBundleVersion</key><string>1</string>
+<key>LSUIElement</key><true/>{icon}
+</dict></plist>
+"#,
+        version = env!("CARGO_PKG_VERSION"),
+    )
 }
 
 /// The icon file to bake in: Default → `default_icon` when `exists`; None → None; File(p) → p
@@ -91,6 +123,14 @@ pub fn osascript_args(title: &str, body: &str) -> Vec<String> {
     };
     vec![
         "-e".to_string(),
-        format!("display notification \"{}\" with title \"{}\"", escape(body), escape(title)),
+        format!(
+            "display notification \"{}\" with title \"{}\"",
+            escape(body),
+            escape(title)
+        ),
     ]
+}
+
+fn hex(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
 }

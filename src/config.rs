@@ -83,13 +83,30 @@ pub fn parse_sound(value: &Value, home: &Path, config_dir: &Path) -> Sound {
 /// and a relative path resolved against `config_dir` (never against the caller's working
 /// directory). Any other JSON type → Default.
 pub fn parse_icon(value: &Value, home: &Path, config_dir: &Path) -> Icon {
-    unimplemented!("delegated: parse-icon")
+    match value {
+        Value::Bool(false) => Icon::None,
+        Value::String(s) if !s.is_empty() && s != "claude" => {
+            let p = expand_home(s, home);
+            Icon::File(if p.is_absolute() {
+                p
+            } else {
+                config_dir.join(p)
+            })
+        }
+        _ => Icon::Default,
+    }
 }
 
 /// The file's JSON object, or `Value::Null` when the file is missing, unreadable, malformed or not
 /// a JSON object.
 pub fn read_layer(path: &Path) -> Value {
-    unimplemented!("delegated: read-layer")
+    match std::fs::read_to_string(path)
+        .ok()
+        .and_then(|s| serde_json::from_str::<Value>(&s).ok())
+    {
+        Some(v @ Value::Object(_)) => v,
+        _ => Value::Null,
+    }
 }
 
 /// Starts from `Config::default()` and applies `global` then `project`, key by key, skipping keys
@@ -99,5 +116,31 @@ pub fn read_layer(path: &Path) -> Value {
 /// make the machine play an arbitrary file), so only the global layer may name a sound file.
 /// `icon` is taken from `global` only (one icon per machine), via `parse_icon`.
 pub fn resolve(global: &Value, project: &Value, home: &Path, config_dir: &Path) -> Config {
-    unimplemented!("delegated: resolve-config")
+    let mut cfg = Config::default();
+    for (layer, is_project) in [(global, false), (project, true)] {
+        let Value::Object(map) = layer else { continue };
+        let set = |key: &str| map.get(key).filter(|v| !v.is_null());
+        let flag = |key: &str| set(key).map(|v| *v != Value::Bool(false));
+        if let Some(on) = flag("enabled") {
+            cfg.enabled = on;
+        }
+        if let Some(on) = flag("bell") {
+            cfg.bell = on;
+        }
+        if let Some(on) = flag("popup") {
+            cfg.popup = on;
+        }
+        if let Some(v) = set("sound") {
+            let sound = parse_sound(v, home, config_dir);
+            if !(is_project && matches!(sound, Sound::File(_))) {
+                cfg.sound = sound;
+            }
+        }
+        if !is_project {
+            if let Some(v) = set("icon") {
+                cfg.icon = parse_icon(v, home, config_dir);
+            }
+        }
+    }
+    cfg
 }

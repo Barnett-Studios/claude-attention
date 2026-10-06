@@ -8,7 +8,13 @@ pub const APP_NAME: &str = "ntfyer";
 
 /// `-a ntfyer`, then `-i <icon>` when there is one, then `--`, `title`, `body`.
 pub fn notify_send_args(title: &str, body: &str, icon: Option<&Path>) -> Vec<String> {
-    unimplemented!("delegated: notify-send-args")
+    let mut args = vec!["-a".to_string(), APP_NAME.to_string()];
+    if let Some(i) = icon {
+        args.push("-i".to_string());
+        args.push(i.to_string_lossy().into_owned());
+    }
+    args.extend(["--".to_string(), title.to_string(), body.to_string()]);
+    args
 }
 
 /// Arguments for `gdbus` calling `org.freedesktop.Notifications.Notify` on the session bus:
@@ -28,7 +34,8 @@ pub fn gdbus_args(title: &str, body: &str, icon: Option<&Path>) -> Vec<String> {
         "--".to_string(),
         APP_NAME.to_string(),
         "0".to_string(),
-        icon.map(|p| p.to_string_lossy().to_string()).unwrap_or_default(),
+        icon.map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_default(),
         title.to_string(),
         body.to_string(),
         "[]".to_string(),

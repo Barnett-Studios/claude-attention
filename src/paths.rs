@@ -43,7 +43,10 @@ impl Paths {
             home.join(".local").join("state").join("ntfyer")
         };
 
-        let app_dir = home.join("Library").join("Application Support").join("ntfyer");
+        let app_dir = home
+            .join("Library")
+            .join("Application Support")
+            .join("ntfyer");
 
         Some(Paths {
             home,

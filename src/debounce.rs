@@ -1,8 +1,8 @@
 //! One signal per burst per project, so a manual call followed by a hook never doubles up while
 //! another project's session still gets through.
 
+use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
-use sha2::{Sha256, Digest};
 
 pub const WINDOW_SECS: u64 = 8;
 
@@ -13,7 +13,9 @@ pub fn stamp_path(state_dir: &Path, project: &Path) -> PathBuf {
     let result = hasher.finalize();
     let hash_hex: String = result.iter().map(|b| format!("{:02x}", b)).collect();
     let hash_short = &hash_hex[..12];
-    state_dir.join("debounce").join(format!("{}.last", hash_short))
+    state_dir
+        .join("debounce")
+        .join(format!("{}.last", hash_short))
 }
 
 /// Reads the last-signal time from `stamp` (whole seconds; missing or unparseable = 0). Inside the
