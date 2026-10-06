@@ -1,0 +1,30 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          xcode-select -p
+          swiftc --version
+          jq --version
+      - name: Hook behaviour
+        run: bash tests/run.sh
+      - name: Notifier build
+        run: bash tests/notifier.sh
+      - name: Plugin manifests are valid JSON
+        run: |
+          jq empty .claude-plugin/marketplace.json
+          jq empty plugin/.claude-plugin/plugin.json
+          jq empty plugin/hooks/hooks.json
