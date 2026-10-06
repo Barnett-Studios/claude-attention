@@ -19,7 +19,7 @@ pub struct Envelope {
 /// Empty or whitespace-only input, malformed JSON, a non-object, or a field of the wrong type →
 /// `Envelope::default()`. Unknown fields are ignored.
 pub fn parse(input: &str) -> Envelope {
-    unimplemented!("delegated: parse-envelope")
+    serde_json::from_str::<Envelope>(input).unwrap_or_default()
 }
 
 /// `"Finished and waiting for you."` when `event` equals `stop` ignoring ASCII case, otherwise
