@@ -25,7 +25,10 @@ pub fn parse(input: &str) -> Envelope {
 /// `"Finished and waiting for you."` when `event` equals `stop` ignoring ASCII case, otherwise
 /// `"Needs your attention."`.
 pub fn default_message(event: Option<&str>) -> &'static str {
-    unimplemented!("delegated: default-message")
+    match event {
+        Some(e) if e.eq_ignore_ascii_case("stop") => "Finished and waiting for you.",
+        _ => "Needs your attention.",
+    }
 }
 
 /// The project's display name: its last path component with `\n` and `\r` removed, or the whole
