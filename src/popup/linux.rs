@@ -16,7 +16,26 @@ pub fn notify_send_args(title: &str, body: &str, icon: Option<&Path>) -> Vec<Str
 /// --method org.freedesktop.Notifications.Notify -- ntfyer 0 <icon or ""> <title> <body> [] {} -1`
 /// (`--` so a title or body starting with `-` is never read as an option)
 pub fn gdbus_args(title: &str, body: &str, icon: Option<&Path>) -> Vec<String> {
-    unimplemented!("delegated: gdbus-args")
+    let mut args = vec![
+        "call".to_string(),
+        "--session".to_string(),
+        "--dest".to_string(),
+        "org.freedesktop.Notifications".to_string(),
+        "--object-path".to_string(),
+        "/org/freedesktop/Notifications".to_string(),
+        "--method".to_string(),
+        "org.freedesktop.Notifications.Notify".to_string(),
+        "--".to_string(),
+        APP_NAME.to_string(),
+        "0".to_string(),
+        icon.map(|p| p.to_string_lossy().to_string()).unwrap_or_default(),
+        title.to_string(),
+        body.to_string(),
+        "[]".to_string(),
+        "{}".to_string(),
+        "-1".to_string(),
+    ];
+    args
 }
 
 /// Posts through `notify-send`, falling back to `gdbus`. Returns whether either succeeded.
