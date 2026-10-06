@@ -48,8 +48,8 @@ pub fn expand_home(raw: &str, home: &Path) -> PathBuf {
     if raw == "~" {
         return home.to_path_buf();
     }
-    if raw.starts_with("~/") {
-        return home.join(&raw[2..]);
+    if let Some(rest) = raw.strip_prefix("~/") {
+        return home.join(rest);
     }
     PathBuf::from(raw)
 }

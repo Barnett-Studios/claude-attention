@@ -22,7 +22,7 @@ pub fn notify_send_args(title: &str, body: &str, icon: Option<&Path>) -> Vec<Str
 /// --method org.freedesktop.Notifications.Notify -- ntfyer 0 <icon or ""> <title> <body> [] {} -1`
 /// (`--` so a title or body starting with `-` is never read as an option)
 pub fn gdbus_args(title: &str, body: &str, icon: Option<&Path>) -> Vec<String> {
-    let mut args = vec![
+    let args = vec![
         "call".to_string(),
         "--session".to_string(),
         "--dest".to_string(),

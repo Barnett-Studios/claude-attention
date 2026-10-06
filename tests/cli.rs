@@ -359,11 +359,11 @@ fn config_path_prints_effective_paths() {
         )),
         "{out}"
     );
+    // the project comes from the working directory, which the OS reports resolved
+    // (/var → /private/var on macOS)
+    let proj = std::fs::canonicalize(&c.proj).expect("canonical project");
     assert!(
-        out.contains(&format!(
-            "project: {}",
-            c.proj.join(".ntfyer.json").display()
-        )),
+        out.contains(&format!("project: {}", proj.join(".ntfyer.json").display())),
         "{out}"
     );
 }
