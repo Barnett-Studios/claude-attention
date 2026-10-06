@@ -17,7 +17,40 @@ impl Paths {
     /// Resolves the layout from an environment lookup. `HOME` unset or empty → `None`.
     /// An empty `XDG_CONFIG_HOME` / `XDG_STATE_HOME` counts as unset.
     pub fn from_lookup(get: impl Fn(&str) -> Option<String>) -> Option<Paths> {
-        unimplemented!("delegated: paths-from-lookup")
+        let home = get("HOME")?;
+        if home.is_empty() {
+            return None;
+        }
+        let home = PathBuf::from(home);
+
+        let config_dir = if let Some(val) = get("XDG_CONFIG_HOME") {
+            if val.is_empty() {
+                home.join(".config").join("ntfyer")
+            } else {
+                PathBuf::from(val).join("ntfyer")
+            }
+        } else {
+            home.join(".config").join("ntfyer")
+        };
+
+        let state_dir = if let Some(val) = get("XDG_STATE_HOME") {
+            if val.is_empty() {
+                home.join(".local").join("state").join("ntfyer")
+            } else {
+                PathBuf::from(val).join("ntfyer")
+            }
+        } else {
+            home.join(".local").join("state").join("ntfyer")
+        };
+
+        let app_dir = home.join("Library").join("Application Support").join("ntfyer");
+
+        Some(Paths {
+            home,
+            config_dir,
+            state_dir,
+            app_dir,
+        })
     }
 
     pub fn from_env() -> Option<Paths> {
