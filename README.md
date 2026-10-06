@@ -1,5 +1,7 @@
 # claude-attention
 
+[![test](https://github.com/Barnett-Studios/claude-attention/actions/workflows/test.yml/badge.svg)](https://github.com/Barnett-Studios/claude-attention/actions/workflows/test.yml)
+
 A Claude Code plugin that gets your attention when Claude finishes a turn or needs input:
 a macOS notification popup with **your choice of icon**, a **configurable chime**, and the
 terminal bell — each switchable globally or per project.
@@ -9,7 +11,7 @@ macOS only for now (Apple Silicon and Intel). On other platforms only the termin
 ## Install
 
 ```
-/plugin marketplace add <this repo's git URL or local path>
+/plugin marketplace add Barnett-Studios/claude-attention
 /plugin install claude-attention@claude-attention
 ```
 

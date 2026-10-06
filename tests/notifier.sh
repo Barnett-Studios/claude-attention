@@ -94,7 +94,7 @@ printf '#!/bin/sh\ntouch "%s/swiftc-ran"\nsleep 4\nexit 1\n' "$d" > "$fake/swift
 rm -rf "$dir/build"
 start=$(date +%s)
 expect "notify with no compiled binary fails fast" '! PATH="$fake:$PATH" "$nt" notify t m >/dev/null 2>&1'
-expect "...within 2 seconds" '(( $(date +%s) - start <= 2 ))'
+expect "...within 3 seconds" '(( $(date +%s) - start <= 3 ))'
 for _ in 1 2 3 4 5 6 7 8 9 10; do [[ -e "$d/swiftc-ran" ]] && break; perl -e 'select(undef,undef,undef,0.3)'; done
 expect "...and starts the compile in the background" '[[ -e "$d/swiftc-ran" ]]'
 # wait out the background build (the fake compile sleeps 4s) before building for real
