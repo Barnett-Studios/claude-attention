@@ -45,7 +45,13 @@ impl Default for Config {
 
 /// `~` → `home`, `~/rest` → `home/rest`; anything else is returned unchanged.
 pub fn expand_home(raw: &str, home: &Path) -> PathBuf {
-    unimplemented!("delegated: expand-home")
+    if raw == "~" {
+        return home.to_path_buf();
+    }
+    if raw.starts_with("~/") {
+        return home.join(&raw[2..]);
+    }
+    PathBuf::from(raw)
 }
 
 /// `false` → Off; `true` → Default; a string: empty → Default, starting with `~` or containing `/`
