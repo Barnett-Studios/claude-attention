@@ -78,5 +78,19 @@ pub fn icon_source(
 /// `display notification "<body>" with title "<title>"`, where in both strings every `\` becomes
 /// `\\` and then every `"` becomes `\"`.
 pub fn osascript_args(title: &str, body: &str) -> Vec<String> {
-    unimplemented!("delegated: osascript-args")
+    let escape = |s: &str| -> String {
+        let mut out = String::new();
+        for c in s.chars() {
+            match c {
+                '\\' => out.push_str("\\\\"),
+                '"' => out.push_str("\\\""),
+                _ => out.push(c),
+            }
+        }
+        out
+    };
+    vec![
+        "-e".to_string(),
+        format!("display notification \"{}\" with title \"{}\"", escape(body), escape(title)),
+    ]
 }
