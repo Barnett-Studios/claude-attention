@@ -13,7 +13,12 @@ pub struct LockGuard {
 /// non-blocking lock on it (`File::try_lock`). Returns None when another holder has it or the file
 /// cannot be opened. The lock is released when the guard is dropped; the file itself stays.
 pub fn acquire(path: &Path) -> Option<LockGuard> {
-    unimplemented!("delegated: lock-acquire")
+    let file = open(path).ok()?;
+    if file.try_lock().is_ok() {
+        Some(LockGuard { _file: file })
+    } else {
+        None
+    }
 }
 
 /// Opens the lock file for locking (shared by `acquire` and callers that only want to probe it).
